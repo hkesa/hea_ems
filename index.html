@@ -16,23 +16,21 @@
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 【設定區域 1】Firebase Config
+        // 【設定區域 1】Firebase Config (請依照教學填入你的 Firebase 資料)
         const firebaseConfig = {
-            apiKey: "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxx", 
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:xxxxxxxxxxx"
+            apiKey: "AIzaSyD0BE-lK6MAR-MMjhoOR-5jm3_5F2Qw1wo", 
+            authDomain: "ems-hea.firebaseapp.com",
+            projectId: "ems-hea",
+            storageBucket: "ems-hea.firebasestorage.app",
+            messagingSenderId: "995449881828",
+            appId: "1:995449881828:web:58dd21bd3f072fd8cdd8f1"
         };
 
-        // 【設定區域 2】Google Sheets App Script URL
-        // 請將部署後的 Google Apps Script 網址貼在下方引號內
-        window.GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZlxwBk0fn3vLQpZk5YhWESbhp0oyvAK7oqFMcVIGkTLRL-yOOaEUcjQdjq3nUgCRY/exec"; 
+        // 【設定區域 2】Google Sheets App Script URL (只作寫入備份用，不讀取)
+        window.GOOGLE_SCRIPT_URL = ""; 
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         window.isFirebaseMode = false;
-        window.isGoogleSheetMode = false;
         window.db = null;
         window.collection = collection;
         window.addDoc = addDoc;
@@ -43,30 +41,29 @@
         window.query = query;
 
         async function initSystem() {
-            const isConfigured = firebaseConfig.projectId !== "your-project-id" && !firebaseConfig.apiKey.includes("xxxx");
+            // 簡單檢查是否有填寫 Firebase Config (檢查 apiKey 是否有值)
+            const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.length > 5;
             
             if (isConfigured) {
                 try {
                     const app = initializeApp(firebaseConfig);
                     window.db = getFirestore(app);
                     window.isFirebaseMode = true;
+                    document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">Firebase 連線中</span>';
                     window.initApp(); 
                     return;
                 } catch (e) {
                     console.error("Firebase Init Error", e);
+                    alert("Firebase 連線失敗，請檢查 Config");
                 }
             } 
             
-            if (window.GOOGLE_SCRIPT_URL && window.GOOGLE_SCRIPT_URL.startsWith("http")) {
-                window.isGoogleSheetMode = true;
-                document.getElementById('mode-badge').innerHTML = ''; 
-            } else {
-                console.log("Offline Mode");
-                document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式</span>';
-                const toast = document.getElementById('offline-toast');
-                toast.classList.remove('hidden');
-                setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
-            }
+            // 如果沒有 Firebase，則進入單機模式
+            console.log("Offline Mode");
+            document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式 (資料僅存於此裝置)</span>';
+            const toast = document.getElementById('offline-toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
             
             window.initApp();
         }
@@ -160,7 +157,7 @@
 
     <div id="offline-toast" class="hidden fixed bottom-5 right-5 bg-white border-l-4 border-orange-500 text-gray-700 p-4 rounded shadow-lg z-50 transition-opacity duration-1000 max-w-sm text-base">
         <p class="font-bold"><i class="fa-solid fa-triangle-exclamation text-orange-500"></i> 目前為單機模式</p>
-        <p class="mt-1">尚未設定 Google Sheets。</p>
+        <p class="mt-1">尚未設定 Firebase。</p>
     </div>
 
     <!-- 導航 -->
@@ -258,7 +255,7 @@
                 
                 <!-- 1. 僱主編號 -->
                 <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">僱主編號 (Employer Number)</label>
+                    <label class="font-bold text-gray-700 mb-2">僱主編號 (編號以E開始，例如：E2805)</label>
                     <input type="text" id="inp-id" class="bg-gray-50" placeholder="例如：E2805" onblur="validate(this)">
                     <div class="error-msg">此欄位必填</div>
                 </div>
@@ -500,8 +497,6 @@
                     <i class="fa-solid fa-upload mr-2"></i> <span id="btn-save-text">上載資料</span>
                 </button>
             </form>
-            
-            <div id="fishing-footer" class="text-center text-gray-400 mt-6 hidden">V1.13</div>
         </div>
 
         <div id="admin-list-area" class="hidden">
@@ -539,6 +534,8 @@
             </div>
             <!-- Footer Message -->
             <div id="public-footer-msg" class="w-full max-w-5xl p-4 bg-blue-50 text-black text-center rounded-lg mt-4 hidden"></div>
+            <!-- Version Number -->
+            <div class="text-center text-gray-400 mt-10 mb-4">V1.14</div>
         </div>
     </section>
 
@@ -634,43 +631,6 @@
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     refreshCurrentView();
                 });
-            } else if (window.isGoogleSheetMode) {
-                document.getElementById('loading-overlay').style.display = 'flex';
-                document.getElementById('loading-overlay').style.opacity = '1';
-                document.getElementById('loading-text').innerText = "從 Google Sheets 讀取資料中...";
-                
-                try {
-                    // Add timeout to prevent hanging forever
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-                    const response = await fetch(window.GOOGLE_SCRIPT_URL, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    const json = await response.json();
-                    if(json.data) {
-                        employers = json.data.map((item, index) => {
-                            return {
-                                ...item,
-                                docId: String(index),
-                                active: true 
-                            };
-                        });
-                        employers.sort((a, b) => {
-                            if(!a.id) return 1; if(!b.id) return -1;
-                            return a.id.localeCompare(b.id);
-                        });
-                    }
-                } catch (e) {
-                    console.error("Sheet Fetch Error", e);
-                    // On error, try local storage fallback or just empty
-                    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-                    if (data) employers = JSON.parse(data);
-                } finally {
-                    document.getElementById('loading-overlay').style.opacity = '0';
-                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-                    refreshCurrentView();
-                }
             } else {
                 const data = localStorage.getItem(LOCAL_STORAGE_KEY);
                 if (data) employers = JSON.parse(data);
@@ -727,10 +687,8 @@
         window.validate = function(el) {
             if(document.getElementById('fishing-header').classList.contains('hidden') === false) { return; }
             
-            // Relaxed Validation for U-records
             const idVal = document.getElementById('inp-id').value.trim();
             const isU = idVal.toUpperCase().startsWith('U');
-            // If it is a U record (either manually typed or fishing mode), and this element is inside "input-only-field" (internal field), skip validation
             if (isU && el.closest('.input-only-field')) {
                 el.classList.remove('input-error'); 
                 const err = el.parentElement.querySelector('.error-msg');
@@ -762,7 +720,6 @@
         window.validateOverseas = function() {
             if(!document.getElementById('fishing-header').classList.contains('hidden')) return true;
             
-            // Relaxed for U
             const idVal = document.getElementById('inp-id').value.trim();
             if (idVal.toUpperCase().startsWith('U')) return true;
 
@@ -959,7 +916,6 @@
 
                 let overseasStr="", flatSize="", empReq="", empName="", empLang="", empPhone="", inqDate="", referrer="";
                 
-                // Determine if strict validation is needed
                 const isU = id && id.toUpperCase().startsWith('U');
 
                 if (!isFishing) {
@@ -985,7 +941,6 @@
                     window.validateMember(document.getElementById('inp-members-string'));
                     window.validatePet(document.getElementById('inp-pets-string'));
                     
-                    // Only validate internal fields if NOT U record
                     if (!isU) {
                         window.validate(document.getElementById('inp-flat-size'));
                         window.validate(document.getElementById('inp-emp-name'));
@@ -1008,12 +963,10 @@
                     if(document.getElementById('inp-nationality').value === 'Other' && !document.getElementById('inp-nationality-other').value) throw new Error('你漏填了問題');
 
                     if (isU) {
-                         // Relaxed for U
                          if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
                             throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
                         }
                     } else {
-                        // Strict for E
                         if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang || !flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer) {
                             throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
                         }
@@ -1046,12 +999,12 @@
                     if (docId) await window.updateDoc(window.doc(window.db, "employers", docId), dataObj);
                     else await window.addDoc(window.collection(window.db, "employers"), dataObj);
                 } else {
-                    // Update Local Employers Array IMMEDIATELY so UI updates without waiting for Google Sheets
+                    // 單機模式Fallback
                     if (docId) { 
                         const idx = employers.findIndex(e => e.docId === docId); 
                         if (idx !== -1) employers[idx] = { ...dataObj, docId }; 
                     } else { 
-                        dataObj.docId = String(Date.now()); // Temporary local ID
+                        dataObj.docId = String(Date.now());
                         employers.push(dataObj); 
                     }
                     employers.sort((a, b) => a.id.localeCompare(b.id));
@@ -1062,7 +1015,7 @@
 
                 inputCache = null;
 
-                // Sync to Google Sheets in background
+                // Sync to Google Sheets (Backup Write Only)
                 if (window.GOOGLE_SCRIPT_URL) { 
                     sendToGoogleSheets(dataObj); 
                 }
@@ -1075,24 +1028,13 @@
                         alert('資料已更改及上架'); 
                     } else {
                         alert('上載成功及已上架');
-                        // Auto-increment logic:
-                        // Clear form data for next entry
                         document.getElementById('employer-form').reset();
                         document.getElementById('edit-doc-id').value = '';
                         currentMembers = []; updateMemberDisplay();
                         currentPets = []; updatePetDisplay();
-                        
-                        // Force generate next E-ID based on current latest (including the one just added)
                         document.getElementById('inp-id').value = getNextId('E');
-                        
-                        // Since we are clearing, we should reset date to today
                         document.getElementById('inp-inquiry-date').valueAsDate = new Date();
                     }
-                    // IMPORTANT: Don't switch to list if adding new data, user wants to add more? 
-                    // No, standard flow is usually to list to confirm. 
-                    // But user specifically asked: "if I enter 'New Data Input' again, it should be cleared".
-                    // So switching to list is fine. When they click 'Input' tab later, switchAdminSub handles clearing/init.
-                    // Wait, switchAdminSub checks if docId is empty to clear. We just cleared it above.
                     switchAdminSub('list'); 
                 }
 
@@ -1111,7 +1053,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                console.log('Sent to Sheets');
+                console.log('Sent to Sheets backup');
             } catch (e) {
                 console.error('Sheet Error', e);
             }
@@ -1210,9 +1152,6 @@
                 document.getElementById('clear-btn-container').classList.remove('hidden');
                 internalFields.forEach(f => f.classList.remove('hidden'));
                 
-                // Logic update: restore if valid cache, OTHERWISE if docId is empty -> clean start
-                // The issue before was after upload, docId was cleared, but inputCache might persist? 
-                // handleSave clears inputCache now. So it should hit the else block.
                 if (inputCache) {
                     restoreInputForm();
                 } else {
@@ -1250,7 +1189,6 @@
             if (newPage !== currentAdminPage) { currentAdminPage = newPage; renderAdminList(); window.scrollTo(0, 0); }
         };
 
-        // --- Helper Function: Merge Members (Adults only) ---
         function formatMembersForDisplay(text) {
             if(!text) return '-';
             const parts = text.split(', ');
@@ -1271,16 +1209,13 @@
             return res.join(', ');
         }
 
-        // --- Helper Function: Merge Pets (Specific types) ---
         function formatPetsForDisplay(text) {
             if(!text) return '-';
             if(text === '沒有寵物') return text;
             
             const parts = text.split(', ');
             const petCounts = {};
-            // Specific types to merge
             const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
-            
             let others = [];
 
             parts.forEach(p => {
@@ -1322,7 +1257,6 @@
                 const status = e.active ? '<span class="text-green-600 font-bold">[上架中]</span>' : '<span class="text-red-600 font-bold">[已下架]</span>';
                 const tTags = e.tags ? `<p class="col-span-full"><span class="font-bold">標籤:</span> ${e.tags}</p>` : '';
                 
-                // Apply merging for Admin view
                 const dispMem = formatMembersForDisplay(e.members);
                 const dispPet = formatPetsForDisplay(e.pets);
 
@@ -1577,7 +1511,6 @@
         function translatePets(text, lang) {
             if(!text) return '-'; if(text === '沒有寵物') return getDict('沒有寵物', lang);
             
-            // Merging Logic for Public Page
             const parts = text.split(', ');
             const petCounts = {};
             const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
