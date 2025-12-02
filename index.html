@@ -10,30 +10,28 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Firebase SDK & Config System -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 【設定區域 1】Firebase Config
-        // 請小心填寫，確保引號 "" 和逗號 , 都存在
+        // 【設定區域 1】Firebase Config (請依照教學填入你的 Firebase 資料)
         const firebaseConfig = {
             apiKey: "AIzaSyD0BE-lK6MAR-MMjhoOR-5jm3_5F2Qw1wo", 
             authDomain: "ems-hea.firebaseapp.com",
             projectId: "ems-hea",
             storageBucket: "ems-hea.firebasestorage.app",
             messagingSenderId: "995449881828",
-            appId: "1:995449881828:web:58dd21bd3f072fd8cdd8f1"
+            appId: "1:995449881828:web:58dd21bd3f072fd8cdd8f1",
+	measurementId: "G-RK1QPVSG6L"
         };
 
-        // 【設定區域 2】Google Sheets App Script URL (只作寫入備份用)
+        // 【設定區域 2】Google Sheets App Script URL (只作寫入備份用，不讀取)
         window.GOOGLE_SCRIPT_URL = ""; 
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-        // Global Variables
         window.isFirebaseMode = false;
-        window.isGoogleSheetMode = false;
         window.db = null;
         window.collection = collection;
         window.addDoc = addDoc;
@@ -42,12 +40,9 @@
         window.deleteDoc = deleteDoc;
         window.onSnapshot = onSnapshot;
         window.query = query;
-        window.appInitialized = false; // 標記系統是否已啟動
 
         async function initSystem() {
-            console.log("System initializing...");
-            
-            // 簡單檢查是否有填寫 Firebase Config
+            // 簡單檢查是否有填寫 Firebase Config (檢查 apiKey 是否有值)
             const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.length > 5;
             
             if (isConfigured) {
@@ -56,42 +51,24 @@
                     window.db = getFirestore(app);
                     window.isFirebaseMode = true;
                     document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">Firebase 連線中</span>';
-                    console.log("Firebase initialized successfully.");
-                    startApp();
+                    window.initApp(); 
                     return;
                 } catch (e) {
-                    console.error("Firebase Init Error:", e);
-                    alert("Firebase 設定有誤，系統將以單機模式啟動。\n錯誤訊息: " + e.message);
+                    console.error("Firebase Init Error", e);
+                    alert("Firebase 連線失敗，請檢查 Config");
                 }
-            } else {
-                console.log("No Firebase config found.");
-            }
+            } 
             
-            // 如果沒有 Firebase 或出錯，進入單機模式
+            // 如果沒有 Firebase，則進入單機模式
+            console.log("Offline Mode");
             document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式 (資料僅存於此裝置)</span>';
             const toast = document.getElementById('offline-toast');
-            if(toast) {
-                toast.classList.remove('hidden');
-                setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
-            }
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
             
-            startApp();
+            window.initApp();
         }
-
-        function startApp() {
-            if (window.initApp && !window.appInitialized) {
-                window.appInitialized = true;
-                window.initApp();
-            }
-        }
-
-        // 啟動系統
-        try {
-            initSystem();
-        } catch(err) {
-            console.error("Critical System Error:", err);
-            // 即使這裡掛了，下方的安全機制也會接手
-        }
+        initSystem();
     </script>
 
     <style>
@@ -559,21 +536,11 @@
             <!-- Footer Message -->
             <div id="public-footer-msg" class="w-full max-w-5xl p-4 bg-blue-50 text-black text-center rounded-lg mt-4 hidden"></div>
             <!-- Version Number -->
-            <div class="text-center text-gray-400 mt-10 mb-4">V1.15</div>
+            <div class="text-center text-gray-400 mt-10 mb-4">V1.14</div>
         </div>
     </section>
 
     <script>
-        // Safety timeout to ensure app loads even if Firebase config crashes
-        setTimeout(function() {
-            if (!window.appInitialized && window.initApp) {
-                console.log("Forcing app init (Offline fallback)...");
-                window.isFirebaseMode = false; // Force offline
-                window.initApp();
-                window.appInitialized = true;
-            }
-        }, 3000); // 3 seconds timeout
-
         let employers = [];
         const PASSWORD = 'admin@ADA2018';
         let currentPage = 1;
@@ -652,70 +619,26 @@
         };
 
         window.initApp = async function() {
-            // Remove loader
             document.getElementById('loading-overlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-            
             renderTags(); renderOverseasOptions();
             document.getElementById('inp-inquiry-date').valueAsDate = new Date();
 
             if (window.isFirebaseMode && window.db) {
                 const q = window.query(window.collection(window.db, "employers"));
-                // Add error handling to snapshot
                 window.onSnapshot(q, (snapshot) => {
                     employers = [];
                     snapshot.forEach((doc) => employers.push({ ...doc.data(), docId: doc.id }));
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     refreshCurrentView();
-                }, (error) => {
-                    console.error("Firebase Snapshot Error:", error);
-                    alert("Firebase 連線中斷或權限不足，請檢查資料庫規則。");
                 });
-            } else if (window.isGoogleSheetMode) {
-                document.getElementById('loading-overlay').style.display = 'flex';
-                document.getElementById('loading-overlay').style.opacity = '1';
-                document.getElementById('loading-text').innerText = "從 Google Sheets 讀取資料中...";
-                
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); 
-
-                    const response = await fetch(window.GOOGLE_SCRIPT_URL, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    const json = await response.json();
-                    if(json.data) {
-                        employers = json.data.map((item, index) => {
-                            return {
-                                ...item,
-                                docId: String(index),
-                                active: true 
-                            };
-                        });
-                        employers.sort((a, b) => {
-                            if(!a.id) return 1; if(!b.id) return -1;
-                            return a.id.localeCompare(b.id);
-                        });
-                    }
-                } catch (e) {
-                    console.error("Sheet Fetch Error", e);
-                    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-                    if (data) employers = JSON.parse(data);
-                } finally {
-                    document.getElementById('loading-overlay').style.opacity = '0';
-                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-                    refreshCurrentView();
-                }
             } else {
-                try {
-                    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-                    if (data) employers = JSON.parse(data);
-                } catch(e) { console.error("LocalStorage Error", e); employers = []; }
+                const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (data) employers = JSON.parse(data);
                 refreshCurrentView();
             }
             switchTab('english');
         };
-        
         function refreshCurrentView() {
             if(!document.getElementById('admin-list-area').classList.contains('hidden')) renderAdminList();
             if(!document.getElementById('page-public').classList.contains('hidden')) renderPublicList();
@@ -726,22 +649,19 @@
             if (prefix === 'E') max = 2804; 
             if (prefix === 'U') max = 1000; 
 
-            if(employers && employers.length > 0) {
-                employers.forEach(e => {
-                    if (e.id && e.id.startsWith(prefix)) {
-                        const numPart = parseInt(e.id.substring(1));
-                        if (!isNaN(numPart) && numPart > max) {
-                            max = numPart;
-                        }
+            employers.forEach(e => {
+                if (e.id && e.id.startsWith(prefix)) {
+                    const numPart = parseInt(e.id.substring(1));
+                    if (!isNaN(numPart) && numPart > max) {
+                        max = numPart;
                     }
-                });
-            }
+                }
+            });
             return prefix + (max + 1);
         }
 
         function renderTags() {
             const c = document.getElementById('tags-container');
-            if(!c) return;
             c.innerHTML = tagList.map(t => `
                 <div class="mb-2">
                     <input type="checkbox" id="tag-${t}" value="${t}" class="hidden tag-checkbox">
@@ -751,7 +671,6 @@
         }
         function renderOverseasOptions() {
             const c = document.getElementById('overseas-options');
-            if(!c) return;
             c.innerHTML = overseasList.map(o => `
                 <label class="inline-flex items-center bg-white border px-4 py-2 rounded cursor-pointer border-blue-200">
                     <input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600 overseas-check" value="${o}">
@@ -1081,8 +1000,14 @@
                     if (docId) await window.updateDoc(window.doc(window.db, "employers", docId), dataObj);
                     else await window.addDoc(window.collection(window.db, "employers"), dataObj);
                 } else {
-                    if (docId) { const idx = employers.findIndex(e => e.docId === docId); if (idx !== -1) employers[idx] = { ...dataObj, docId }; } 
-                    else { dataObj.docId = String(Date.now()); employers.push(dataObj); }
+                    // 單機模式Fallback
+                    if (docId) { 
+                        const idx = employers.findIndex(e => e.docId === docId); 
+                        if (idx !== -1) employers[idx] = { ...dataObj, docId }; 
+                    } else { 
+                        dataObj.docId = String(Date.now());
+                        employers.push(dataObj); 
+                    }
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers));
@@ -1091,6 +1016,7 @@
 
                 inputCache = null;
 
+                // Sync to Google Sheets (Backup Write Only)
                 if (window.GOOGLE_SCRIPT_URL) { 
                     sendToGoogleSheets(dataObj); 
                 }
@@ -1549,7 +1475,8 @@
             if(!text) return '-';
             const parts = text.split(', ');
             let adultCount = 0;
-            let others = [];
+            let otherParts = [];
+            
             parts.forEach(p => {
                 if(p.includes('成人')) {
                     const match = p.match(/(\d+)成人/);
