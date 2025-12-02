@@ -16,7 +16,7 @@
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 【設定區域 1】Firebase Config (如果使用 Firebase 請填寫，否則保留原樣)
+        // 【設定區域 1】Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxx", 
             authDomain: "your-project.firebaseapp.com",
@@ -26,9 +26,9 @@
             appId: "1:123456789:web:xxxxxxxxxxx"
         };
 
-        // 【設定區域 2】Google Sheets App Script URL (重要：跨裝置同步請填寫此處)
+        // 【設定區域 2】Google Sheets App Script URL
         // 請將部署後的 Google Apps Script 網址貼在下方引號內
-        window.GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZlxwBk0fn3vLQpZk5YhWESbhp0oyvAK7oqFMcVIGkTLRL-yOOaEUcjQdjq3nUgCRY/exec"; 
+        window.GOOGLE_SCRIPT_URL = ""; 
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         window.isFirebaseMode = false;
@@ -45,31 +45,26 @@
         async function initSystem() {
             const isConfigured = firebaseConfig.projectId !== "your-project-id" && !firebaseConfig.apiKey.includes("xxxx");
             
-            // 優先嘗試 Firebase
             if (isConfigured) {
                 try {
                     const app = initializeApp(firebaseConfig);
                     window.db = getFirestore(app);
                     window.isFirebaseMode = true;
-                    console.log("Firebase Mode");
-                    document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">雲端同步 (Firebase)</span>';
-                    window.initApp(); // 直接初始化
+                    // document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">Firebase</span>';
+                    window.initApp(); 
                     return;
                 } catch (e) {
                     console.error("Firebase Init Error", e);
                 }
             } 
             
-            // 其次嘗試 Google Sheets
             if (window.GOOGLE_SCRIPT_URL && window.GOOGLE_SCRIPT_URL.startsWith("http")) {
                 window.isGoogleSheetMode = true;
-                console.log("Google Sheet Mode");
-                document.getElementById('mode-badge').innerHTML = '<span class="bg-blue-100 text-blue-800 font-medium mr-2 px-2 py-1 rounded border border-blue-400">雲端同步 (Google Sheets)</span>';
-                // Google Sheet 模式的初始化在 window.initApp 內部處理 fetch
+                // 用戶要求刪除這句顯示
+                document.getElementById('mode-badge').innerHTML = ''; 
             } else {
-                // 最後使用單機模式
                 console.log("Offline Mode");
-                document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式 (資料僅存於此裝置)</span>';
+                document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式</span>';
                 const toast = document.getElementById('offline-toast');
                 toast.classList.remove('hidden');
                 setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
@@ -81,40 +76,25 @@
     </script>
 
     <style>
-        /* 1. 字體系統重設 (統一 18px) */
-        :root {
-            --fs-base: 18px;
-        }
+        :root { --fs-base: 18px; }
         html { font-size: var(--fs-base); } 
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; color: #1f2937; line-height: 1.6; }
         
-        /* 應用字體大小 */
         body, p, input, select, textarea, label, span, div, li, td, th, h1, h2, h3, h4, .text-lg, .text-xl, .text-2xl, .text-3xl { font-size: var(--fs-base) !important; }
         button, .btn-nav, .wa-btn, .file-btn, .salary-btn { font-size: var(--fs-base) !important; }
         
-        /* Nav & Buttons */
         .btn-nav { padding: 10px 20px; font-weight: bold; }
         .btn-nav.active { background-color: #1e40af; color: white; }
         .hidden-section { display: none; }
         
-        /* Navbar Shrink Effect */
         #main-nav { transition: all 0.3s ease-in-out; }
         #main-nav.shrink { padding-top: 5px; padding-bottom: 5px; }
         
-        /* Mobile Navbar Optimizations */
         @media (max-width: 640px) {
             #main-nav.shrink { padding-top: 2px; padding-bottom: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             #main-nav.shrink .nav-logo { font-size: 1.1rem !important; }
             .btn-nav-container { flex-wrap: nowrap !important; gap: 4px !important; width: 100%; padding-left: 5px; padding-right: 5px; }
-            .btn-nav { 
-                padding: 8px 5px !important; 
-                font-size: 14px !important; 
-                flex: 1; 
-                white-space: nowrap; 
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
+            .btn-nav { padding: 8px 5px !important; font-size: 14px !important; flex: 1; white-space: nowrap; display: flex; justify-content: center; align-items: center; }
         }
 
         .wa-btn {
@@ -133,34 +113,17 @@
             color: #1e40af; transition: opacity 0.5s;
         }
         
-        /* Form Controls */
         input, select, textarea { padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; width: 100%; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
         
         /* Date Picker Left Icon Style */
-        input[type="date"].date-left-icon {
-            position: relative;
-            padding-left: 42px; /* Space for icon */
-        }
+        input[type="date"].date-left-icon { position: relative; padding-left: 42px; }
         input[type="date"].date-left-icon::-webkit-calendar-picker-indicator {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
-            opacity: 0.6;
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; cursor: pointer; padding: 0; margin: 0; opacity: 0.6;
         }
-        input[type="date"].date-left-icon::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
-        }
-        input[type="date"].date-left-icon::-webkit-datetime-edit {
-            margin-left: 0; 
-        }
+        input[type="date"].date-left-icon::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+        input[type="date"].date-left-icon::-webkit-datetime-edit { margin-left: 0; }
         
         .salary-btn {
             background-color: #e5e7eb; color: #374151; width: 60px; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -168,24 +131,16 @@
         }
         .salary-btn:hover { background-color: #d1d5db; }
 
-        /* Validation & Error Msg */
-        .error-msg {
-            background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; margin-top: 4px; display: none; font-weight: bold;
-        }
+        .error-msg { background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; margin-top: 4px; display: none; font-weight: bold; }
         .error-msg.visible { display: block; }
         .input-error { border-color: #ef4444 !important; border-width: 2px !important; }
 
-        /* Tag Styling */
-        .tag-checkbox:checked + label {
-            background-color: #fce7f3; color: #9f1239; border-color: #f472b6;
-        }
+        .tag-checkbox:checked + label { background-color: #fce7f3; color: #9f1239; border-color: #f472b6; }
         .tag-checkbox:checked + label::before { content: '✔ '; }
         
-        /* Internal Field Styling */
         .internal-field { background-color: #f0f9ff; border: 2px solid #bae6fd; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
         .internal-label { color: #0369a1; font-weight: bold; display: block; margin-bottom: 8px; }
         
-        /* Info Box */
         .info-box {
             background: linear-gradient(to right, #eff6ff, #ffffff);
             border-left: 6px solid #3b82f6;
@@ -208,7 +163,7 @@
 
     <div id="offline-toast" class="hidden fixed bottom-5 right-5 bg-white border-l-4 border-orange-500 text-gray-700 p-4 rounded shadow-lg z-50 transition-opacity duration-1000 max-w-sm text-base">
         <p class="font-bold"><i class="fa-solid fa-triangle-exclamation text-orange-500"></i> 目前為單機模式</p>
-        <p class="mt-1">尚未設定 Firebase 或 Google Sheets。</p>
+        <p class="mt-1">尚未設定 Google Sheets。</p>
     </div>
 
     <!-- 導航 -->
@@ -221,7 +176,6 @@
                     </div>
                     <div id="mode-badge" class="mt-1"></div>
                 </div>
-                <!-- Modify buttons container for mobile single line -->
                 <div class="btn-nav-container flex gap-2 flex-wrap justify-center md:justify-end">
                     <button onclick="switchTab('admin')" id="nav-admin" class="btn-nav rounded hover:bg-blue-50 transition">🇭🇰 Agency</button>
                     <button onclick="switchTab('english')" id="nav-english" class="btn-nav rounded hover:bg-blue-50 transition">🇵🇭 English</button>
@@ -549,7 +503,7 @@
                 </button>
             </form>
             
-            <div id="fishing-footer" class="text-center text-gray-400 mt-6 hidden">V1.11</div>
+            <div id="fishing-footer" class="text-center text-gray-400 mt-6 hidden">V1.12</div>
         </div>
 
         <div id="admin-list-area" class="hidden">
@@ -600,18 +554,15 @@
         const LOCAL_STORAGE_KEY = 'horizon_employers_offline_v8';
         const LAST_ID_KEY = 'horizon_last_id_num';
         
-        // 新增變數：用於狀態保存
         let currentAdminSub = 'input';
         let inputCache = null;
 
-        // --- Navbar Shrink ---
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('main-nav');
             if (window.scrollY > 50) { nav.classList.add('shrink'); } 
             else { nav.classList.remove('shrink'); }
         });
 
-        // --- Data ---
         const tagList = [
             "急 Urgent", "高薪 High salary", "近地鐵 Near MTR", "大學 University", "好僱主 Good employer",
             "一個小孩 1 child only", "一個長者 1 elderly only", "2個長者 2 elderly only", "3個長者 3 elderly only",
@@ -671,7 +622,6 @@
             '其他': { en: 'Other', id: 'Lainnya' }, '沒有寵物': { en: 'No Pets', id: 'Tidak ada hewan peliharaan' }
         };
 
-        // --- Init ---
         window.initApp = async function() {
             document.getElementById('loading-overlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
@@ -687,7 +637,6 @@
                     refreshCurrentView();
                 });
             } else if (window.isGoogleSheetMode) {
-                // Fetch from Google Sheets
                 document.getElementById('loading-overlay').style.display = 'flex';
                 document.getElementById('loading-overlay').style.opacity = '1';
                 document.getElementById('loading-text').innerText = "從 Google Sheets 讀取資料中...";
@@ -697,22 +646,16 @@
                     const json = await response.json();
                     if(json.data) {
                         employers = json.data.map((item, index) => {
-                            // Map sheet columns to object (Requires Apps Script to return correct structure)
-                            // Assuming Apps Script returns object array directly
-                            // Or handle row array mapping here if Apps Script returns simple rows.
-                            // We will assume the updated Apps Script returns nicely formatted JSON.
                             return {
                                 ...item,
-                                docId: String(index), // Fake docId for edit tracking
-                                active: true // Assume active if in sheet
+                                docId: String(index),
+                                active: true 
                             };
                         });
-                        // Sort by ID
                         employers.sort((a, b) => {
                             if(!a.id) return 1; if(!b.id) return -1;
                             return a.id.localeCompare(b.id);
                         });
-                        console.log("Loaded from Sheets:", employers.length);
                     }
                 } catch (e) {
                     console.error("Sheet Fetch Error", e);
@@ -736,12 +679,10 @@
             if(!document.getElementById('page-public').classList.contains('hidden')) renderPublicList();
         }
 
-        // --- Helper: Get Next ID (Modified for E and U) ---
         function getNextId(prefix) {
             let max = 0;
-            // Default base if no data found
-            if (prefix === 'E') max = 2804; // Start E2805
-            if (prefix === 'U') max = 1000; // Start U1001
+            if (prefix === 'E') max = 2804; 
+            if (prefix === 'U') max = 1000; 
 
             employers.forEach(e => {
                 if (e.id && e.id.startsWith(prefix)) {
@@ -754,7 +695,6 @@
             return prefix + (max + 1);
         }
 
-        // --- Render UI Helpers ---
         function renderTags() {
             const c = document.getElementById('tags-container');
             c.innerHTML = tagList.map(t => `
@@ -780,9 +720,20 @@
             if(chk.checked) inp.classList.remove('hidden'); else { inp.classList.add('hidden'); err.classList.remove('visible'); }
         }
 
-        // --- Validation Logic ---
         window.validate = function(el) {
             if(document.getElementById('fishing-header').classList.contains('hidden') === false) { return; }
+            
+            // Relaxed Validation for U-records
+            const idVal = document.getElementById('inp-id').value.trim();
+            const isU = idVal.toUpperCase().startsWith('U');
+            // If it is a U record (either manually typed or fishing mode), and this element is inside "input-only-field" (internal field), skip validation
+            if (isU && el.closest('.input-only-field')) {
+                el.classList.remove('input-error'); 
+                const err = el.parentElement.querySelector('.error-msg');
+                if(err) err.classList.remove('visible');
+                return;
+            }
+
             const err = el.parentElement.querySelector('.error-msg');
             if(!el.value) { el.classList.add('input-error'); if(err) err.classList.add('visible'); } 
             else { el.classList.remove('input-error'); if(err) err.classList.remove('visible'); }
@@ -806,6 +757,11 @@
         }
         window.validateOverseas = function() {
             if(!document.getElementById('fishing-header').classList.contains('hidden')) return true;
+            
+            // Relaxed for U
+            const idVal = document.getElementById('inp-id').value.trim();
+            if (idVal.toUpperCase().startsWith('U')) return true;
+
             const chks = document.querySelectorAll('.overseas-check:checked');
             const err = document.getElementById('overseas-error');
             if(chks.length === 0) { err.classList.add('visible'); return false; }
@@ -820,7 +776,6 @@
             }
         }
 
-        // --- Logic: Pets ---
         let currentPets = [];
         window.adjPet = function(v) { let el=document.getElementById('pet-add-qty'); let n=parseInt(el.value)+v; if(n<1)n=1; el.value=n; }
         window.togglePetInputs = function() {
@@ -855,12 +810,10 @@
             else { c.innerHTML=currentPets.map((p,i)=>`<span class="bg-green-100 text-green-800 px-3 py-1 rounded flex items-center gap-2">${p.text} <button type="button" onclick="removePet(${i})" class="text-red-500 font-bold px-1">&times;</button></span>`).join(''); document.getElementById('inp-pets-string').value=currentPets.map(p=>p.text).join(', '); }
         }
 
-        // --- Logic: Members ---
         let currentMembers = [];
         window.toggleAgeInput = function() {
             const type = document.getElementById('mem-type').value;
             const group = document.getElementById('age-input-group');
-            // 修改：加入雙胞胎、三胞胎需要輸入年齡
             if(type === '成人') group.classList.add('hidden'); else group.classList.remove('hidden');
         }
         window.addMember = function() {
@@ -869,7 +822,6 @@
             if(type !== '成人' && !age) { alert('請輸入年齡'); return; }
             
             let text = "";
-            // 修改：新增雙胞胎、三胞胎的文字處理
             if(type === '成人') text = "1成人";
             else if (type === '雙胞胎') text = `1雙胞胎(${age}歲)`; 
             else if (type === '三胞胎') text = `1三胞胎(${age}歲)`;
@@ -888,58 +840,34 @@
             document.getElementById('inp-members-string').value = s.join(', ');
         }
 
-        // --- Other Toggles ---
         window.toggleRoomOther = function() { const v = document.getElementById('inp-room').value; if(v==='其他') document.getElementById('inp-room-other').classList.remove('hidden'); else document.getElementById('inp-room-other').classList.add('hidden'); }
         window.toggleNatOther = function() { const v = document.getElementById('inp-nationality').value; if(v==='Other') document.getElementById('inp-nationality-other').classList.remove('hidden'); else document.getElementById('inp-nationality-other').classList.add('hidden'); }
         window.adjustSalary = function(val) { let el = document.getElementById('inp-salary'); let v = parseInt(el.value); if(isNaN(v)) v = 5100; v += val; if(v < 5100) v = 5100; el.value = v; window.validate(el); }
         
-        // --- Clear Input Form (已修復) ---
         window.clearInputForm = function() {
             if(!confirm("確定要清除所有填寫內容嗎？")) return;
-            
-            // 清除緩存，防止還原
             inputCache = null;
-
-            // 1. 重置表單
             const form = document.getElementById('employer-form');
             form.reset();
-
-            // 2. 清除內部狀態陣列
             currentMembers = [];
             currentPets = [];
-
-            // 3. 更新顯示介面
             updateMemberDisplay();
             updatePetDisplay();
-
-            // 4. 重置 UI 隱藏欄位 (其他選項)
             toggleNatOther();
             toggleRoomOther();
             togglePetInputs();
             toggleTagOther();
-
-            // 5. 清除所有標籤勾選
             document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
             document.querySelectorAll('.overseas-check').forEach(c => c.checked = false);
-
-            // 6. 移除所有錯誤提示
             document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
             document.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
-
-            // 7. 重置日期為今天
             document.getElementById('inp-inquiry-date').valueAsDate = new Date();
-            
-            // 8. 重置隱藏的 ID (避免編輯模式殘留)
             document.getElementById('edit-doc-id').value = '';
-
-            // 9. 重新獲取新的 ID
             document.getElementById('inp-id').value = getNextId('E');
         }
 
-        // --- Save/Restore Form State Logic ---
         function snapshotInputForm() {
             inputCache = {
-                // Values
                 id: document.getElementById('inp-id').value,
                 location: document.getElementById('inp-location').value,
                 flatSize: document.getElementById('inp-flat-size').value,
@@ -958,27 +886,18 @@
                 inqDate: document.getElementById('inp-inquiry-date').value,
                 referrer: document.getElementById('inp-referrer').value,
                 editDocId: document.getElementById('edit-doc-id').value,
-                
-                // Arrays
                 members: [...currentMembers],
                 pets: [...currentPets],
-                
-                // Checkboxes
                 tags: Array.from(document.querySelectorAll('.tag-checkbox:checked')).map(c => c.value),
                 overseas: Array.from(document.querySelectorAll('.overseas-check:checked')).map(c => c.value),
-                
-                // Tag Other
                 tagOtherChecked: document.getElementById('tag-other-check').checked,
                 tagOtherText: document.getElementById('tag-other-text').value,
-                
-                // Pet other text
                 petOtherText: document.getElementById('inp-pets-other-text').value
             };
         }
 
         function restoreInputForm() {
             if (!inputCache) return;
-            
             document.getElementById('inp-id').value = inputCache.id;
             document.getElementById('inp-location').value = inputCache.location;
             document.getElementById('inp-flat-size').value = inputCache.flatSize;
@@ -997,38 +916,27 @@
             document.getElementById('inp-inquiry-date').value = inputCache.inqDate;
             document.getElementById('inp-referrer').value = inputCache.referrer;
             document.getElementById('edit-doc-id').value = inputCache.editDocId;
-            
             currentMembers = [...inputCache.members];
             updateMemberDisplay();
-            
             currentPets = [...inputCache.pets];
             updatePetDisplay();
-            
-            // Checkboxes
             document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = inputCache.tags.includes(c.value));
             document.querySelectorAll('.overseas-check').forEach(c => c.checked = inputCache.overseas.includes(c.value));
-            
-            // Tag Other
             document.getElementById('tag-other-check').checked = inputCache.tagOtherChecked;
             document.getElementById('tag-other-text').value = inputCache.tagOtherText;
-            
             document.getElementById('inp-pets-other-text').value = inputCache.petOtherText;
-
-            // Update UI visibility based on restored values
             toggleNatOther();
             toggleRoomOther();
             toggleTagOther();
             togglePetInputs();
         }
 
-        // --- Save Logic ---
         window.handleSave = async function() {
             const btn = document.getElementById('btn-save');
             btn.disabled = true; document.getElementById('btn-save-text').innerText = "處理中...";
             const isFishing = !document.getElementById('fishing-header').classList.contains('hidden');
             
             try {
-                // Collect Basics
                 const id = document.getElementById('inp-id').value;
                 const loc = document.getElementById('inp-location').value;
                 let nat = document.getElementById('inp-nationality').value; if(nat === 'Other') nat = document.getElementById('inp-nationality-other').value;
@@ -1040,15 +948,16 @@
                 const lang = document.getElementById('inp-lang').value;
                 const remarks = document.getElementById('inp-remarks').value;
 
-                // Tags
                 let tags = [];
                 document.querySelectorAll('.tag-checkbox:checked').forEach(c => tags.push(c.value));
                 if(document.getElementById('tag-other-check').checked) { const ot = document.getElementById('tag-other-text').value; if(ot) tags.push(ot); }
                 const tagStr = tags.join(', ');
 
-                // Internal fields
                 let overseasStr="", flatSize="", empReq="", empName="", empLang="", empPhone="", inqDate="", referrer="";
                 
+                // Determine if strict validation is needed
+                const isU = id && id.toUpperCase().startsWith('U');
+
                 if (!isFishing) {
                     let overseasArr = [];
                     document.querySelectorAll('.overseas-check:checked').forEach(c => overseasArr.push(c.value));
@@ -1071,26 +980,39 @@
                     window.validate(document.getElementById('inp-lang'));
                     window.validateMember(document.getElementById('inp-members-string'));
                     window.validatePet(document.getElementById('inp-pets-string'));
-                    window.validate(document.getElementById('inp-flat-size'));
-                    window.validate(document.getElementById('inp-emp-name'));
-                    window.validate(document.getElementById('inp-emp-lang'));
-                    window.validate(document.getElementById('inp-emp-phone'));
-                    window.validate(document.getElementById('inp-inquiry-date'));
-                    window.validate(document.getElementById('inp-referrer'));
-                    window.validateTagOther(document.getElementById('tag-other-text'));
                     
+                    // Only validate internal fields if NOT U record
+                    if (!isU) {
+                        window.validate(document.getElementById('inp-flat-size'));
+                        window.validate(document.getElementById('inp-emp-name'));
+                        window.validate(document.getElementById('inp-emp-lang'));
+                        window.validate(document.getElementById('inp-emp-phone'));
+                        window.validate(document.getElementById('inp-inquiry-date'));
+                        window.validate(document.getElementById('inp-referrer'));
+                        const osValid = window.validateOverseas();
+                        if(!osValid) throw new Error('你漏填了問題');
+                    }
+
+                    window.validateTagOther(document.getElementById('tag-other-text'));
                     window.validateOther(document.getElementById('inp-room-other'), 'inp-room');
                     window.validateOther(document.getElementById('inp-nationality-other'), 'inp-nationality');
 
-                    const osValid = window.validateOverseas();
                     const tagOtherCheck = document.getElementById('tag-other-check');
                     if(tagOtherCheck.checked && !document.getElementById('tag-other-text').value) throw new Error('你漏填了問題');
 
                     if(document.getElementById('inp-room').value === '其他' && !document.getElementById('inp-room-other').value) throw new Error('你漏填了問題');
                     if(document.getElementById('inp-nationality').value === 'Other' && !document.getElementById('inp-nationality-other').value) throw new Error('你漏填了問題');
 
-                    if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang || !flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer || !osValid) {
-                        throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
+                    if (isU) {
+                         // Relaxed for U
+                         if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
+                            throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
+                        }
+                    } else {
+                        // Strict for E
+                        if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang || !flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer) {
+                            throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
+                        }
                     }
                 } else {
                     if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
@@ -1124,20 +1046,15 @@
                     else { dataObj.docId = String(Date.now()); employers.push(dataObj); }
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     
-                    // Only save to local storage if not in google sheet mode (to avoid conflict or confusion, or save as cache)
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers));
                     refreshCurrentView();
                 }
 
-                // *** Save Success: Clear Cache ***
                 inputCache = null;
 
-                // *** 只在非釣魚模式下，且有設定 URL 時，傳送至 Google Sheets ***
                 if (!isFishing && window.GOOGLE_SCRIPT_URL) { 
                     await sendToGoogleSheets(dataObj); 
-                    // 如果是 Google Sheet Mode，重新讀取以獲取最新資料
                     if(window.isGoogleSheetMode) {
-                        // 稍微延遲一下讓 Google Sheet 寫入完成
                         setTimeout(() => window.initApp(), 1500); 
                     }
                 }
@@ -1147,7 +1064,18 @@
                     switchAdminSub('list'); 
                 } else { 
                     if (docId) alert('資料已更改及上架'); 
-                    else alert('上載成功及已上架'); 
+                    else {
+                        alert('上載成功及已上架');
+                        // Auto-increment Fix: Clear form so next input gets new ID
+                        // We reset the form but keep it in 'input' mode theoretically if user wants to add more?
+                        // User requirement: After upload, click input again, ID should be +1.
+                        // Currently we switch to list. When user clicks 'input' again, switchAdminSub checks if docId is empty.
+                        // We need to make sure the form is reset so switchAdminSub treats it as new.
+                        document.getElementById('employer-form').reset();
+                        document.getElementById('edit-doc-id').value = '';
+                        currentMembers = []; updateMemberDisplay();
+                        currentPets = []; updatePetDisplay();
+                    }
                     switchAdminSub('list'); 
                 }
 
@@ -1172,7 +1100,6 @@
             }
         }
 
-        // --- Other Actions ---
         window.toggleActive = async function(docId, currentStatus) {
             if (window.isFirebaseMode) { await window.updateDoc(window.doc(window.db, "employers", docId), { active: !currentStatus }); }
             else { const emp = employers.find(e => e.docId === docId); if(emp) { emp.active = !currentStatus; localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers)); refreshCurrentView(); } }
@@ -1183,14 +1110,9 @@
             else { const idx = employers.findIndex(e => e.docId === docId); if(idx > -1) { employers.splice(idx, 1); localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers)); refreshCurrentView(); } }
         };
         window.editEmp = function(docId) {
-            // Edit will overwrite current cache because user INTENDS to edit
-            // Ideally we could confirm with user if they have unsaved changes, but simplified logic:
-            
             const e = employers.find(emp => emp.docId === docId);
             if(!e) return;
             
-            // Populate logic same as before (direct DOM manipulation)
-            // Restore Basic
             document.getElementById('inp-id').value = e.id;
             document.getElementById('inp-location').value = e.location;
             const stdNat = ['Filipino','Indonesian','Filipino & Indonesian','Indonesian & Filipino'];
@@ -1205,7 +1127,6 @@
             document.getElementById('inp-lang').value = e.lang;
             document.getElementById('inp-remarks').value = e.remarks || '';
             
-            // Restore Internal
             if(document.getElementById('inp-flat-size')) {
                 document.getElementById('inp-flat-size').value = e.flat_size || '';
                 document.getElementById('inp-emp-req').value = e.emp_req || '';
@@ -1219,7 +1140,6 @@
                 document.querySelectorAll('.overseas-check').forEach(c => c.checked = os.includes(c.value));
             }
 
-            // Restore Tags
             const ts = (e.tags || '').split(', ');
             document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = ts.includes(c.value));
             const stdTags = tagList;
@@ -1234,13 +1154,10 @@
             currentMembers = []; e.members.split(', ').forEach(p => currentMembers.push({text: p})); updateMemberDisplay();
             currentPets = []; if(e.pets) e.pets.split(', ').forEach(p => currentPets.push({text: p})); updatePetDisplay();
             
-            // Immediately snapshot this edit state so switching tabs preserves it
             snapshotInputForm();
-            
             switchAdminSub('input'); window.scrollTo(0,0);
         };
 
-        // --- View & Navigation ---
         window.switchTab = function(tab) {
             document.getElementById('page-login').classList.add('hidden-section');
             document.getElementById('page-admin').classList.add('hidden-section');
@@ -1260,14 +1177,11 @@
             else { document.getElementById('login-error').classList.remove('hidden'); }
         };
         
-        // ** Modified Switch Logic for State Preservation **
         window.switchAdminSub = function(sub) {
-            // 1. If currently in Input mode and switching AWAY, save snapshot
             if (currentAdminSub === 'input' && sub !== 'input') {
                 snapshotInputForm();
             }
 
-            // UI Changes
             document.getElementById('admin-input-area').classList.add('hidden'); document.getElementById('admin-list-area').classList.add('hidden');
             document.getElementById('fishing-header').classList.add('hidden'); document.getElementById('fishing-footer').classList.add('hidden');
             document.getElementById('clear-btn-container').classList.add('hidden');
@@ -1279,17 +1193,16 @@
                 document.getElementById('clear-btn-container').classList.remove('hidden');
                 internalFields.forEach(f => f.classList.remove('hidden'));
                 
-                // Logic: Restore state OR Clean Start
                 if (inputCache) {
                     restoreInputForm();
                 } else {
-                    // Clean start if no cache
+                    // Logic fix: Only generate new ID if we are NOT editing an existing doc
                     if(document.getElementById('edit-doc-id').value === '') {
                         document.getElementById('employer-form').reset();
                         currentMembers=[]; updateMemberDisplay();
                         currentPets=[]; updatePetDisplay();
                         document.getElementById('inp-inquiry-date').valueAsDate = new Date();
-                        // Generate E ID
+                        // Always recalc ID for fresh form
                         document.getElementById('inp-id').value = getNextId('E');
                     }
                 }
@@ -1300,10 +1213,6 @@
                 document.getElementById('fishing-footer').classList.remove('hidden');
                 internalFields.forEach(f => f.classList.add('hidden')); 
                 
-                // Generate Fishing Data (U ID)
-                // Note: We do NOT clear currentMembers/Pets array reference, 
-                // but generateFishingData creates NEW arrays, so it's safe.
-                // However, to be safe visually, we reset visual form elements before filling
                 document.getElementById('employer-form').reset();
                 generateFishingData();
             }
@@ -1316,7 +1225,6 @@
             currentAdminSub = sub;
         };
 
-        // --- Admin Pagination ---
         window.changeAdminPage = function(dir) {
             const totalPages = Math.ceil(employers.length / itemsPerPage);
             let newPage = currentAdminPage + dir;
@@ -1385,9 +1293,7 @@
             });
         }
 
-        // --- Fishing Logic (Modified to use getNextId('U')) ---
         window.generateFishingData = function() {
-            // Use generic helper to find next U number
             document.getElementById('inp-id').value = getNextId('U');
             
             const st = Object.keys(locationMap); document.getElementById('inp-location').value = st[Math.floor(Math.random()*st.length)];
@@ -1413,7 +1319,6 @@
             const langs = ['英文','英文','英文','廣東話','普通話','英文&廣東話','英文&普通話']; document.getElementById('inp-lang').value = langs[Math.floor(Math.random()*langs.length)];
             document.getElementById('inp-date').value = '盡快'; document.getElementById('inp-remarks').value = '';
             
-            // Random Tags
             document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
             document.getElementById('tag-other-check').checked = false; toggleTagOther();
             const allowedTags = ["急 Urgent", "高薪 High salary", "近地鐵 Near MTR", "好僱主 Good employer", 
@@ -1424,7 +1329,6 @@
             choices.forEach(t => { const el = document.getElementById(`tag-${t}`); if(el) el.checked = true; });
         };
 
-        // --- Public Render ---
         function renderPublicList() {
             const container = document.getElementById('public-records-container'); container.innerHTML = '';
             const activeEmps = employers.filter(e => e.active);
@@ -1437,7 +1341,6 @@
             const bannerText = document.getElementById('banner-text');
             bannerBox.className = "w-full max-w-5xl mb-6 p-6 rounded-lg text-left shadow-md border-l-8 bg-blue-50 border-blue-300 text-black";
             
-            // Footer message default style (hidden initially)
             const footerMsg = document.getElementById('public-footer-msg');
             footerMsg.className = "w-full max-w-5xl p-4 text-center rounded-lg mt-4 hidden shadow-md border-l-8";
             
@@ -1449,7 +1352,6 @@
                 document.getElementById('btn-prev').innerText = 'Prev'; document.getElementById('btn-next').innerText = 'Next';
                 
                 footerMsg.innerHTML = "If you still haven’t found employer you like, please contact us on WhatsApp, we will help you find one that you like.";
-                // Style match banner: bg-blue-50, border-blue-300
                 footerMsg.classList.add('bg-blue-50', 'border-blue-300');
             } else {
                 bannerText.innerHTML = "💵 Semua pekerja tanpa biaya penempatan, tanpa biaya agen, dan tanpa biaya pendaftaran.<br><br>💼 Ingin melamar kerja atau merekomendasikan teman? Klik tombol hijau di bawah untuk WhatsApp kami.<br><br>🤝 Di Agen Ketenagakerjaan kami, Anda memiliki hak untuk memilih majikan berikutnya yang Anda inginkan. Kami tidak memaksa Anda untuk memilih. Rekomendasikan teman dan keluarga Anda sekarang.";
@@ -1459,7 +1361,6 @@
                 document.getElementById('btn-prev').innerText = 'Sebelumnya'; document.getElementById('btn-next').innerText = 'Berikutnya';
                 
                 footerMsg.innerHTML = "Jika Anda masih belum menemukan majikan yang Anda sukai, silakan hubungi kami melalui WhatsApp. Kami akan membantu Anda menemukan yang sesuai dengan keinginan Anda.";
-                // Style match banner: bg-blue-50, border-blue-300
                 footerMsg.classList.add('bg-blue-50', 'border-blue-300');
             }
             
@@ -1577,7 +1478,6 @@
             let translatedOthers = otherParts.map(p => {
                 let res = p;
                 if(lang === 'english') {
-                    // Update: 翻譯 Twins / Triplets
                     res = res.replace(/小孩/g, ' Kid').replace(/長者/g, ' Elderly').replace(/男孩/g, ' Boy').replace(/女孩/g, ' Girl')
                              .replace(/雙胞胎/g, ' Twins').replace(/三胞胎/g, ' Triplets')
                              .replace(/婆婆/g, ' Grandma').replace(/公公/g, ' Grandpa').replace(/歲/g, 'yo');
