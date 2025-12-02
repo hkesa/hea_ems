@@ -50,7 +50,6 @@
                     const app = initializeApp(firebaseConfig);
                     window.db = getFirestore(app);
                     window.isFirebaseMode = true;
-                    // document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">Firebase</span>';
                     window.initApp(); 
                     return;
                 } catch (e) {
@@ -60,7 +59,6 @@
             
             if (window.GOOGLE_SCRIPT_URL && window.GOOGLE_SCRIPT_URL.startsWith("http")) {
                 window.isGoogleSheetMode = true;
-                // 用戶要求刪除這句顯示
                 document.getElementById('mode-badge').innerHTML = ''; 
             } else {
                 console.log("Offline Mode");
@@ -117,7 +115,6 @@
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
         
-        /* Date Picker Left Icon Style */
         input[type="date"].date-left-icon { position: relative; padding-left: 42px; }
         input[type="date"].date-left-icon::-webkit-calendar-picker-indicator {
             position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; cursor: pointer; padding: 0; margin: 0; opacity: 0.6;
@@ -249,10 +246,11 @@
             </div>
 
             <!-- Clear Content Button (Input Mode Only) -->
-            <div id="clear-btn-container" class="mb-4 text-right">
-                <button type="button" onclick="clearInputForm()" class="bg-red-50 text-red-600 px-4 py-2 rounded border border-red-200 hover:bg-red-100 font-bold">
+            <div id="clear-btn-container" class="mb-4 flex flex-col sm:flex-row justify-start items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <button type="button" onclick="clearInputForm()" class="bg-red-50 text-red-600 px-4 py-2 rounded border border-red-200 hover:bg-red-100 font-bold whitespace-nowrap">
                     <i class="fa-solid fa-trash mr-1"></i> 清除內容
                 </button>
+                <span class="text-sm text-gray-500 font-medium">每次輸入新資料前，先按一按「清除內容」按鈕</span>
             </div>
 
             <form id="employer-form" class="space-y-8">
@@ -503,7 +501,7 @@
                 </button>
             </form>
             
-            <div id="fishing-footer" class="text-center text-gray-400 mt-6 hidden">V1.12</div>
+            <div id="fishing-footer" class="text-center text-gray-400 mt-6 hidden">V1.13</div>
         </div>
 
         <div id="admin-list-area" class="hidden">
@@ -642,7 +640,13 @@
                 document.getElementById('loading-text').innerText = "從 Google Sheets 讀取資料中...";
                 
                 try {
-                    const response = await fetch(window.GOOGLE_SCRIPT_URL);
+                    // Add timeout to prevent hanging forever
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+                    const response = await fetch(window.GOOGLE_SCRIPT_URL, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
                     const json = await response.json();
                     if(json.data) {
                         employers = json.data.map((item, index) => {
@@ -659,7 +663,7 @@
                     }
                 } catch (e) {
                     console.error("Sheet Fetch Error", e);
-                    alert("無法從 Google Sheets 讀取資料，將使用本地緩存。");
+                    // On error, try local storage fallback or just empty
                     const data = localStorage.getItem(LOCAL_STORAGE_KEY);
                     if (data) employers = JSON.parse(data);
                 } finally {
@@ -1042,8 +1046,14 @@
                     if (docId) await window.updateDoc(window.doc(window.db, "employers", docId), dataObj);
                     else await window.addDoc(window.collection(window.db, "employers"), dataObj);
                 } else {
-                    if (docId) { const idx = employers.findIndex(e => e.docId === docId); if (idx !== -1) employers[idx] = { ...dataObj, docId }; } 
-                    else { dataObj.docId = String(Date.now()); employers.push(dataObj); }
+                    // Update Local Employers Array IMMEDIATELY so UI updates without waiting for Google Sheets
+                    if (docId) { 
+                        const idx = employers.findIndex(e => e.docId === docId); 
+                        if (idx !== -1) employers[idx] = { ...dataObj, docId }; 
+                    } else { 
+                        dataObj.docId = String(Date.now()); // Temporary local ID
+                        employers.push(dataObj); 
+                    }
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers));
@@ -1052,30 +1062,37 @@
 
                 inputCache = null;
 
-                if (!isFishing && window.GOOGLE_SCRIPT_URL) { 
-                    await sendToGoogleSheets(dataObj); 
-                    if(window.isGoogleSheetMode) {
-                        setTimeout(() => window.initApp(), 1500); 
-                    }
+                // Sync to Google Sheets in background
+                if (window.GOOGLE_SCRIPT_URL) { 
+                    sendToGoogleSheets(dataObj); 
                 }
 
                 if (isFishing) { 
                     alert('上載成功及已上架'); 
                     switchAdminSub('list'); 
                 } else { 
-                    if (docId) alert('資料已更改及上架'); 
-                    else {
+                    if (docId) {
+                        alert('資料已更改及上架'); 
+                    } else {
                         alert('上載成功及已上架');
-                        // Auto-increment Fix: Clear form so next input gets new ID
-                        // We reset the form but keep it in 'input' mode theoretically if user wants to add more?
-                        // User requirement: After upload, click input again, ID should be +1.
-                        // Currently we switch to list. When user clicks 'input' again, switchAdminSub checks if docId is empty.
-                        // We need to make sure the form is reset so switchAdminSub treats it as new.
+                        // Auto-increment logic:
+                        // Clear form data for next entry
                         document.getElementById('employer-form').reset();
                         document.getElementById('edit-doc-id').value = '';
                         currentMembers = []; updateMemberDisplay();
                         currentPets = []; updatePetDisplay();
+                        
+                        // Force generate next E-ID based on current latest (including the one just added)
+                        document.getElementById('inp-id').value = getNextId('E');
+                        
+                        // Since we are clearing, we should reset date to today
+                        document.getElementById('inp-inquiry-date').valueAsDate = new Date();
                     }
+                    // IMPORTANT: Don't switch to list if adding new data, user wants to add more? 
+                    // No, standard flow is usually to list to confirm. 
+                    // But user specifically asked: "if I enter 'New Data Input' again, it should be cleared".
+                    // So switching to list is fine. When they click 'Input' tab later, switchAdminSub handles clearing/init.
+                    // Wait, switchAdminSub checks if docId is empty to clear. We just cleared it above.
                     switchAdminSub('list'); 
                 }
 
@@ -1193,16 +1210,17 @@
                 document.getElementById('clear-btn-container').classList.remove('hidden');
                 internalFields.forEach(f => f.classList.remove('hidden'));
                 
+                // Logic update: restore if valid cache, OTHERWISE if docId is empty -> clean start
+                // The issue before was after upload, docId was cleared, but inputCache might persist? 
+                // handleSave clears inputCache now. So it should hit the else block.
                 if (inputCache) {
                     restoreInputForm();
                 } else {
-                    // Logic fix: Only generate new ID if we are NOT editing an existing doc
                     if(document.getElementById('edit-doc-id').value === '') {
                         document.getElementById('employer-form').reset();
                         currentMembers=[]; updateMemberDisplay();
                         currentPets=[]; updatePetDisplay();
                         document.getElementById('inp-inquiry-date').valueAsDate = new Date();
-                        // Always recalc ID for fresh form
                         document.getElementById('inp-id').value = getNextId('E');
                     }
                 }
@@ -1232,6 +1250,61 @@
             if (newPage !== currentAdminPage) { currentAdminPage = newPage; renderAdminList(); window.scrollTo(0, 0); }
         };
 
+        // --- Helper Function: Merge Members (Adults only) ---
+        function formatMembersForDisplay(text) {
+            if(!text) return '-';
+            const parts = text.split(', ');
+            let adultCount = 0;
+            let others = [];
+            parts.forEach(p => {
+                if(p.includes('成人')) {
+                    const match = p.match(/(\d+)成人/);
+                    if(match) adultCount += parseInt(match[1]);
+                    else adultCount += 1;
+                } else {
+                    others.push(p);
+                }
+            });
+            let res = [];
+            if(adultCount > 0) res.push(`${adultCount}成人`);
+            res = res.concat(others);
+            return res.join(', ');
+        }
+
+        // --- Helper Function: Merge Pets (Specific types) ---
+        function formatPetsForDisplay(text) {
+            if(!text) return '-';
+            if(text === '沒有寵物') return text;
+            
+            const parts = text.split(', ');
+            const petCounts = {};
+            // Specific types to merge
+            const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
+            
+            let others = [];
+
+            parts.forEach(p => {
+                let matched = false;
+                for(let t of targetTypes) {
+                    if(p.includes(t)) {
+                        const match = p.match(/^(\d+)(.+)$/);
+                        if(match && match[2] === t) {
+                            petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]);
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+                if(!matched) others.push(p);
+            });
+
+            let res = [];
+            for(let t in petCounts) {
+                res.push(`${petCounts[t]}${t}`);
+            }
+            return res.concat(others).join(', ');
+        }
+
         function renderAdminList() {
             const c = document.getElementById('admin-records-container'); c.innerHTML = '';
             document.getElementById('db-status-text').innerText = window.isFirebaseMode ? "(Firebase Cloud)" : (window.isGoogleSheetMode ? "(Google Sheet)" : "(Offline)");
@@ -1249,6 +1322,10 @@
                 const status = e.active ? '<span class="text-green-600 font-bold">[上架中]</span>' : '<span class="text-red-600 font-bold">[已下架]</span>';
                 const tTags = e.tags ? `<p class="col-span-full"><span class="font-bold">標籤:</span> ${e.tags}</p>` : '';
                 
+                // Apply merging for Admin view
+                const dispMem = formatMembersForDisplay(e.members);
+                const dispPet = formatPetsForDisplay(e.pets);
+
                 const html = `
                     <div class="bg-white p-6 rounded-lg shadow border border-l-8 ${e.active ? 'border-l-green-500' : 'border-l-red-500'}">
                         <div class="flex flex-col sm:flex-row justify-between items-start mb-4 pb-2 border-b">
@@ -1262,9 +1339,9 @@
                         <div class="text-gray-700">
                             <p class="font-bold text-blue-600 mb-2">公開資料：</p>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <p><span class="font-bold">成員:</span> ${e.members}</p>
+                                <p><span class="font-bold">成員:</span> ${dispMem}</p>
                                 <p><span class="font-bold">地區:</span> ${e.location}</p>
-                                <p><span class="font-bold">寵物:</span> ${e.pets}</p>
+                                <p><span class="font-bold">寵物:</span> ${dispPet}</p>
                                 <p><span class="font-bold">房間:</span> ${e.room}</p>
                                 <p><span class="font-bold">上班:</span> ${e.date}</p>
                                 <p><span class="font-bold">薪金:</span> $${e.salary}</p>
@@ -1499,8 +1576,35 @@
 
         function translatePets(text, lang) {
             if(!text) return '-'; if(text === '沒有寵物') return getDict('沒有寵物', lang);
+            
+            // Merging Logic for Public Page
             const parts = text.split(', ');
-            const translatedParts = parts.map(p => {
+            const petCounts = {};
+            const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
+            let others = [];
+
+            parts.forEach(p => {
+                let matched = false;
+                for(let t of targetTypes) {
+                    if(p.includes(t)) {
+                        const match = p.match(/^(\d+)(.+)$/);
+                        if(match && match[2] === t) {
+                            petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]);
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+                if(!matched) others.push(p);
+            });
+
+            const mergedParts = [];
+            for(let t in petCounts) {
+                mergedParts.push(`${petCounts[t]}${t}`);
+            }
+            const allParts = mergedParts.concat(others);
+
+            const translatedParts = allParts.map(p => {
                 const match = p.match(/^(\d+)(.+)$/);
                 if(match) { const qty = match[1]; const name = match[2]; const tName = getDict(name, lang); return `${qty} ${tName}`; }
                 return p; 
