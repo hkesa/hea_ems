@@ -123,7 +123,17 @@
         }
         .salary-btn:hover { background-color: #d1d5db; }
 
-        .error-msg { background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; margin-top: 4px; display: none; font-weight: bold; }
+        /* Error Message Style B002 */
+        .error-msg { 
+            background-color: #fee2e2; /* Light Red */
+            color: #991b1b; /* Dark Red */
+            padding: 6px 10px; 
+            border-radius: 4px; 
+            margin-top: 6px; 
+            display: none; 
+            font-weight: bold; 
+            font-size: 0.9rem !important;
+        }
         .error-msg.visible { display: block; }
         .input-error { border-color: #ef4444 !important; border-width: 2px !important; }
 
@@ -205,6 +215,16 @@
                     <li>7️⃣ Filipinos</li>
                     <li>8️⃣ Indonesians</li>
                 </ul>
+                <!-- Added Section -->
+                <h3 class="mt-6">Refer your friends and family</h3>
+                <ul class="list-none pl-0">
+                    <li>1️⃣ From overseas</li>
+                    <li>2️⃣ Finishing contract in HK</li>
+                    <li>3️⃣ Refer an employer</li>
+                    <li>4️⃣ Renewing a contract</li>
+                    <li>5️⃣ Direct hire</li>
+                    <li>6️⃣ Friend of a friend</li>
+                </ul>
             </div>
         </div>
 
@@ -228,7 +248,6 @@
              <button onclick="switchAdminSub('input')" id="sub-btn-input" class="px-6 py-3 rounded-full bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 transition">新資料輸入器</button>
              <button onclick="switchAdminSub('edit')" id="sub-btn-edit" class="hidden px-6 py-3 rounded-full bg-orange-100 text-orange-800 font-bold hover:bg-orange-200 transition">修改資料</button>
              
-             <!-- Fishing & Logout group to right -->
              <div class="ml-auto flex gap-4">
                 <button onclick="switchAdminSub('fishing')" id="sub-btn-fishing" class="px-6 py-3 rounded-full bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition">釣魚盤</button>
                 <button onclick="logout()" class="px-6 py-3 rounded-full bg-gray-200 text-gray-800 font-bold hover:bg-gray-300 transition"><i class="fa-solid fa-right-from-bracket"></i> 登出</button>
@@ -303,7 +322,7 @@
             </div>
             <div id="public-footer-msg" class="w-full max-w-5xl p-4 bg-blue-50 text-black text-center rounded-lg mt-4 hidden"></div>
             <!-- Version Update -->
-            <div class="text-center text-gray-400 mt-10 mb-4">V1.18</div>
+            <div class="text-center text-gray-400 mt-10 mb-4">V1.19</div>
         </div>
     </section>
 
@@ -316,7 +335,7 @@
             <div class="flex flex-col">
                 <label class="font-bold text-gray-700 mb-2 label-id">僱主編號 (編號以E開始，例如：E2805)</label>
                 <input type="text" class="inp-id bg-gray-50" placeholder="例如：E2805" onblur="validate(this)">
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 2. 家庭成員 -->
@@ -324,7 +343,7 @@
                 <label class="font-bold text-gray-700 mb-3">家庭成員及年齡 (可以多選)</label>
                 <div class="member-list-display mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
                 <input type="hidden" class="inp-members-string" onblur="validateMember(this)">
-                <div class="error-msg member-error">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg member-error">你漏填此欄，請填寫後再上載資料</div>
                 
                 <div class="flex gap-4 items-end">
                     <div class="flex-1">
@@ -353,14 +372,14 @@
             <div class="flex flex-col">
                 <label class="font-bold text-gray-700 mb-2">僱主地區 (Employer Location)</label>
                 <input type="text" class="inp-location" placeholder="例如：將軍澳" onblur="validate(this)">
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 內部欄位：單位呎數 -->
             <div class="flex flex-col internal-field input-only-field">
                 <label class="internal-label"><i class="fa-solid fa-lock"></i> 單位呎數 (外傭看不到，內部紀錄)</label>
                 <input type="text" class="inp-flat-size" placeholder="例如：500呎" onblur="validate(this)">
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 4. 寵物 -->
@@ -368,7 +387,7 @@
                 <label class="font-bold text-gray-700 mb-3">寵物 (可以多選)</label>
                 <div class="pet-list-display mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
                 <input type="hidden" class="inp-pets-string" onblur="validatePet(this)">
-                <div class="error-msg pet-error">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg pet-error">你漏填此欄，請填寫後再上載資料</div>
                 
                 <div class="flex gap-4 items-end flex-wrap">
                     <div class="flex-1 min-w-[200px]">
@@ -416,7 +435,7 @@
                     <option value="其他">其他</option>
                 </select>
                 <input type="text" class="inp-room-other mt-2 hidden" placeholder="請以英文填寫" onblur="validateOther(this, '.inp-room')">
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 6. 上班日期 -->
@@ -438,7 +457,7 @@
                     <option value="十一月">十一月</option>
                     <option value="十二月">十二月</option>
                 </select>
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 7. 薪金 -->
@@ -451,7 +470,7 @@
                         <div onclick="adjustSalary(this, -100)" class="salary-btn rounded-r-lg border border-gray-300">▼</div>
                     </div>
                 </div>
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 內部欄位：聘請類別 -->
@@ -459,7 +478,7 @@
                 <label class="internal-label"><i class="fa-solid fa-lock"></i> 聘請類別 (可以多選) 外傭看不到，內部紀錄</label>
                 <div class="flex flex-wrap gap-3 overseas-options"></div>
                 <input type="hidden" class="inp-overseas-local">
-                <div class="error-msg overseas-error">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg overseas-error">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 8. 國籍 -->
@@ -474,7 +493,7 @@
                     <option value="Other">其他 (Other)</option>
                 </select>
                 <input type="text" class="inp-nationality-other mt-2 hidden" placeholder="請以英文填寫，例如：Sri Lankans" onblur="validateOther(this, '.inp-nationality')">
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 9. 語言 -->
@@ -488,7 +507,7 @@
                     <option value="英文&廣東話">英文&廣東話</option>
                     <option value="英文&普通話">英文&普通話</option>
                 </select>
-                <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
             </div>
 
             <!-- 內部欄位：僱主要求 -->
@@ -511,7 +530,7 @@
                     <input type="checkbox" class="hidden tag-other-check" onchange="toggleTagOther(this)">
                     <label class="bg-white border border-pink-300 text-pink-700 px-4 py-2 rounded cursor-pointer hover:bg-pink-100 select-none tag-other-label">其他 Other</label>
                     <input type="text" class="mt-2 w-full hidden tag-other-text" placeholder="請以英文填寫" onblur="validateTagOther(this)">
-                    <div class="error-msg tag-other-error">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg tag-other-error">你漏填此欄，請填寫後再上載資料</div>
                 </div>
             </div>
 
@@ -520,7 +539,7 @@
                 <div class="flex flex-col internal-field">
                     <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主姓名 (外傭看不到，內部紀錄)</label>
                     <input type="text" class="inp-emp-name" onblur="validate(this)">
-                    <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
                 </div>
                 <div class="flex flex-col internal-field">
                     <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主語言 (外傭看不到，內部紀錄)</label>
@@ -531,22 +550,22 @@
                         <option value="普通話">普通話</option>
                         <option value="普通話但識廣東話">普通話但識廣東話</option>
                     </select>
-                    <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
                 </div>
                 <div class="flex flex-col internal-field">
                     <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主電話 (外傭看不到，內部紀錄)</label>
                     <input type="text" class="inp-emp-phone" onblur="validate(this)">
-                    <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
                 </div>
                 <div class="flex flex-col internal-field">
                     <label class="internal-label"><i class="fa-solid fa-lock"></i> 查詢日期 (外傭看不到，內部紀錄)</label>
                     <input type="date" class="inp-inquiry-date date-left-icon" onblur="validate(this)">
-                    <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
                 </div>
                 <div class="flex flex-col internal-field">
                     <label class="internal-label"><i class="fa-solid fa-lock"></i> 介紹人 (外傭看不到，內部紀錄)</label>
                     <input type="text" class="inp-referrer" placeholder="例如：舊客E1234、Google廣告" onblur="validate(this)">
-                    <div class="error-msg">你漏填資料，請檢查和填寫相關資料</div>
+                    <div class="error-msg">你漏填此欄，請填寫後再上載資料</div>
                 </div>
             </div>
 
@@ -951,7 +970,6 @@
             
             const btnTextSpan = btn.querySelector('.btn-save-text');
             const orgText = btnTextSpan.innerText;
-            btn.disabled = true; btnTextSpan.innerText = "處理中...";
             
             const isFishingMode = !document.getElementById('fishing-header').classList.contains('hidden') && mgr === mainForm;
             
@@ -975,27 +993,61 @@
                 let overseasStr="", flatSize="", empReq="", empName="", empLang="", empPhone="", inqDate="", referrer="";
                 const isU = id.startsWith('U');
 
+                // NEW VALIDATION LOGIC FOR MANDATORY FIELDS (ONLY FOR NON-FISHING)
                 if (!isFishingMode) {
-                    // Full Validation for Input/Edit
+                    let isValid = true;
+
+                    // 1. Common Mandatory Fields
+                    ['.inp-id', '.inp-location', '.inp-nationality', '.inp-room', '.inp-date', '.inp-salary', '.inp-lang'].forEach(sel => {
+                        const el = form.querySelector(sel);
+                        validate(el); // Toggles error visual
+                        if(!el.value) isValid = false;
+                    });
+
+                    // 2. Members
+                    validateMember(form.querySelector('.inp-members-string'));
+                    if(!memStr) isValid = false;
+
+                    // 3. Pets
+                    validatePet(form.querySelector('.inp-pets-string'));
+                    if(!petStr) isValid = false;
+
+                    // 4. Internal Fields (Only if not U)
                     if(!isU) {
+                         ['.inp-flat-size', '.inp-emp-name', '.inp-emp-lang', '.inp-emp-phone', '.inp-inquiry-date', '.inp-referrer'].forEach(sel => {
+                            const el = form.querySelector(sel);
+                            validate(el);
+                            if(!el.value) isValid = false;
+                         });
+                         
                          let overseasArr = [];
                          form.querySelectorAll('.overseas-check:checked').forEach(c => overseasArr.push(c.value));
                          overseasStr = overseasArr.join(', ');
-                         flatSize = form.querySelector('.inp-flat-size').value;
-                         empReq = form.querySelector('.inp-emp-req').value;
-                         empName = form.querySelector('.inp-emp-name').value;
-                         empLang = form.querySelector('.inp-emp-lang').value;
-                         empPhone = form.querySelector('.inp-emp-phone').value;
-                         inqDate = form.querySelector('.inp-inquiry-date').value;
-                         referrer = form.querySelector('.inp-referrer').value;
                          
-                         if(!validateOverseas(form)) throw new Error('你漏填了聘請類別');
-                         if(!flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer) throw new Error('你漏填了內部欄位');
+                         if(!validateOverseas(form)) isValid = false;
+                    } else {
+                        // For U, these might be empty, but assign empty strings
                     }
-                    if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
-                         throw new Error('你漏填了必要問題');
+
+                    // 5. Check "Other" inputs
+                    // Nationality Other
+                    if(form.querySelector('.inp-nationality').value === 'Other' && !form.querySelector('.inp-nationality-other').value) {
+                        validateOther(form.querySelector('.inp-nationality-other'), '.inp-nationality');
+                        isValid = false;
+                    }
+                    // Room Other
+                    if(form.querySelector('.inp-room').value === '其他' && !form.querySelector('.inp-room-other').value) {
+                        validateOther(form.querySelector('.inp-room-other'), '.inp-room');
+                        isValid = false;
+                    }
+
+                    if(!isValid) {
+                        return; // STOP HERE, errors are already shown on screen
                     }
                 }
+
+                // Proceed with upload
+                btn.disabled = true; btnTextSpan.innerText = "處理中...";
 
                 if (parseInt(salary) < 5100) { alert('薪金錯誤，重新填寫'); throw new Error('薪金錯誤'); }
 
