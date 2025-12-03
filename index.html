@@ -16,7 +16,7 @@
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 【設定區域 1】Firebase Config (請依照教學填入你的 Firebase 資料)
+        // 【設定區域 1】Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyD0BE-lK6MAR-MMjhoOR-5jm3_5F2Qw1wo", 
             authDomain: "ems-hea.firebaseapp.com",
@@ -24,10 +24,10 @@
             storageBucket: "ems-hea.firebasestorage.app",
             messagingSenderId: "995449881828",
             appId: "1:995449881828:web:58dd21bd3f072fd8cdd8f1",
-	measurementId: "G-RK1QPVSG6L"
+            measurementId: "G-RK1QPVSG6L"
         };
 
-        // 【設定區域 2】Google Sheets App Script URL (只作寫入備份用，不讀取)
+        // 【設定區域 2】Google Sheets App Script URL
         window.GOOGLE_SCRIPT_URL = ""; 
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -42,7 +42,6 @@
         window.query = query;
 
         async function initSystem() {
-            // 簡單檢查是否有填寫 Firebase Config (檢查 apiKey 是否有值)
             const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.length > 5;
             
             if (isConfigured) {
@@ -50,7 +49,7 @@
                     const app = initializeApp(firebaseConfig);
                     window.db = getFirestore(app);
                     window.isFirebaseMode = true;
-                    document.getElementById('mode-badge').innerHTML = '<span class="bg-green-100 text-green-800 font-medium mr-2 px-2 py-1 rounded border border-green-400">Firebase 連線中</span>';
+                    // Badge 初始隱藏，由 UI 邏輯控制顯示
                     window.initApp(); 
                     return;
                 } catch (e) {
@@ -59,9 +58,7 @@
                 }
             } 
             
-            // 如果沒有 Firebase，則進入單機模式
             console.log("Offline Mode");
-            document.getElementById('mode-badge').innerHTML = '<span class="bg-orange-100 text-orange-800 font-medium mr-2 px-2 py-1 rounded border border-orange-400">單機模式 (資料僅存於此裝置)</span>';
             const toast = document.getElementById('offline-toast');
             toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(), 1000); }, 5000);
@@ -145,6 +142,11 @@
         .info-box p { margin-bottom: 12px; }
         .info-box li { margin-bottom: 8px; }
         .info-box a { color: #2563eb; text-decoration: underline; font-weight: bold; }
+        
+        /* Edit Section Style */
+        #admin-edit-area { border: 3px solid #f59e0b; }
+        #admin-edit-area .internal-field { border-color: #fcd34d; background-color: #fffbeb; }
+        #edit-header { background-color: #fef3c7; border-bottom: 2px solid #fcd34d; }
     </style>
 </head>
 <body class="pb-40 text-gray-800">
@@ -169,7 +171,8 @@
                     <div class="nav-logo font-bold text-blue-900 text-center md:text-left text-2xl">
                         Employer List
                     </div>
-                    <div id="mode-badge" class="mt-1"></div>
+                    <!-- Mode Badge moved logic to JS to only show on Admin pages -->
+                    <div id="mode-badge" class="mt-1 hidden"></div>
                 </div>
                 <div class="btn-nav-container flex gap-2 flex-wrap justify-center md:justify-end">
                     <button onclick="switchTab('admin')" id="nav-admin" class="btn-nav rounded hover:bg-blue-50 transition">🇭🇰 Agency</button>
@@ -182,6 +185,7 @@
 
     <!-- 1. 登入頁面 -->
     <section id="page-login" class="max-w-4xl mx-auto mt-10 p-6 hidden-section">
+        <!-- Content kept same -->
         <div class="grid grid-cols-1 gap-6 mb-10">
             <div class="info-box">
                 <h3>Contact Information</h3>
@@ -203,15 +207,6 @@
                     <li>7️⃣ Filipinos</li>
                     <li>8️⃣ Indonesians</li>
                 </ul>
-                <h3 class="mt-6">Refer your friends and family</h3>
-                <ul class="list-none pl-0">
-                    <li>1️⃣ From overseas</li>
-                    <li>2️⃣ Finishing contract in HK</li>
-                    <li>3️⃣ Refer an employer</li>
-                    <li>4️⃣ Renewing a contract</li>
-                    <li>5️⃣ Direct hire</li>
-                    <li>6️⃣ Friend of a friend</li>
-                </ul>
             </div>
         </div>
 
@@ -231,288 +226,60 @@
     <!-- 2. 管理員後台 -->
     <section id="page-admin" class="max-w-screen-xl mx-auto mt-10 px-4 hidden-section">
         <div class="flex flex-wrap gap-4 mb-8 border-b pb-4">
-            <button onclick="switchAdminSub('input')" class="px-6 py-3 rounded-full bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 transition">新資料輸入器</button>
-            <button onclick="switchAdminSub('fishing')" class="px-6 py-3 rounded-full bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition">釣魚盤</button>
-            <button onclick="switchAdminSub('list')" class="px-6 py-3 rounded-full bg-yellow-100 text-yellow-800 font-bold hover:bg-yellow-200 transition">已上載的資料</button>
+             <!-- Modified Order: List, Input, Edit(Hidden), Fishing -->
+             <button onclick="switchAdminSub('list')" id="sub-btn-list" class="px-6 py-3 rounded-full bg-yellow-100 text-yellow-800 font-bold hover:bg-yellow-200 transition">已上載的資料</button>
+             <button onclick="switchAdminSub('input')" id="sub-btn-input" class="px-6 py-3 rounded-full bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 transition">新資料輸入器</button>
+             <!-- Edit button hidden by default, shown only when editing -->
+             <button onclick="switchAdminSub('edit')" id="sub-btn-edit" class="hidden px-6 py-3 rounded-full bg-orange-100 text-orange-800 font-bold hover:bg-orange-200 transition">修改資料</button>
+             <!-- Fishing moved to right -->
+             <button onclick="switchAdminSub('fishing')" id="sub-btn-fishing" class="px-6 py-3 rounded-full bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition ml-auto">釣魚盤</button>
         </div>
 
-        <!-- INPUT / FISHING AREA -->
-        <div id="admin-input-area" class="bg-white p-8 rounded-xl shadow-md">
-            <div id="fishing-header" class="hidden mb-8 bg-purple-50 p-6 rounded-lg border border-purple-200 flex justify-between items-center">
-                <span class="font-bold text-purple-800">🎬 釣魚盤模式 (隨機生成)</span>
-                <button onclick="generateFishingData()" class="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition">重新生成數據</button>
-            </div>
-
-            <!-- Clear Content Button (Input Mode Only) -->
-            <div id="clear-btn-container" class="mb-4 flex flex-col sm:flex-row justify-start items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <button type="button" onclick="clearInputForm()" class="bg-red-50 text-red-600 px-4 py-2 rounded border border-red-200 hover:bg-red-100 font-bold whitespace-nowrap">
-                    <i class="fa-solid fa-trash mr-1"></i> 清除內容
-                </button>
-                <span class="text-sm text-gray-500 font-medium">每次輸入新資料前，先按一按「清除內容」按鈕</span>
-            </div>
-
-            <form id="employer-form" class="space-y-8">
-                <input type="hidden" id="edit-doc-id"> 
-                
-                <!-- 1. 僱主編號 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">僱主編號 (編號以E開始，例如：E2805)</label>
-                    <input type="text" id="inp-id" class="bg-gray-50" placeholder="例如：E2805" onblur="validate(this)">
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 2. 家庭成員 -->
-                <div class="flex flex-col p-6 bg-gray-50 rounded-lg border">
-                    <label class="font-bold text-gray-700 mb-3">家庭成員及年齡 (可以多選)</label>
-                    <div id="member-list-display" class="mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
-                    <input type="hidden" id="inp-members-string" onblur="validateMember(this)">
-                    <div class="error-msg" id="member-error">請至少新增一位家庭成員</div>
-                    
-                    <div class="flex gap-4 items-end">
-                        <div class="flex-1">
-                            <label class="text-gray-500 mb-1 block">成員類型</label>
-                            <select id="mem-type" onchange="toggleAgeInput()">
-                                <option value="成人">成人 Adult</option>
-                                <option value="小孩">小孩 Child</option>
-                                <option value="男孩">男孩 Boy</option>
-                                <option value="女孩">女孩 Girl</option>
-                                <option value="雙胞胎">雙胞胎 Twins</option>
-                                <option value="三胞胎">三胞胎 Triplets</option>
-                                <option value="長者">長者 Elderly</option>
-                                <option value="公公">公公 Grandpa</option>
-                                <option value="婆婆">婆婆 Grandma</option>
-                            </select>
-                        </div>
-                        <div class="w-32 hidden" id="age-input-group">
-                            <label class="text-gray-500 mb-1 block">年齡</label>
-                            <input type="number" id="mem-age" placeholder="歲">
-                        </div>
-                        <button type="button" onclick="addMember()" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 h-full">新增</button>
-                    </div>
-                </div>
-
-                <!-- 3. 地區 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">僱主地區 (Employer Location)</label>
-                    <input type="text" id="inp-location" placeholder="例如：將軍澳" onblur="validate(this)">
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 內部欄位：單位呎數 -->
-                <div class="flex flex-col internal-field input-only-field">
-                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 單位呎數 (外傭看不到，內部紀錄)</label>
-                    <input type="text" id="inp-flat-size" placeholder="例如：500呎" onblur="validate(this)">
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 4. 寵物 -->
-                <div class="flex flex-col p-6 bg-gray-50 rounded-lg border">
-                    <label class="font-bold text-gray-700 mb-3">寵物 (可以多選)</label>
-                    <div id="pet-list-display" class="mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
-                    <input type="hidden" id="inp-pets-string" onblur="validatePet(this)">
-                    <div class="error-msg" id="pet-error">請至少新增一項寵物資料(或選無)</div>
-                    
-                    <div class="flex gap-4 items-end flex-wrap">
-                        <div class="flex-1 min-w-[200px]">
-                            <label class="text-gray-500 mb-1 block">寵物類型</label>
-                            <select id="pet-add-type" onchange="togglePetInputs()">
-                                <option value="" disabled selected hidden>請選擇...</option>
-                                <option value="沒有寵物">沒有寵物</option>
-                                <option value="小狗">小狗 Small Dog</option>
-                                <option value="中狗">中狗 Medium Dog</option>
-                                <option value="大狗">大狗 Big Dog</option>
-                                <option value="貓">貓 Cat</option>
-                                <option value="兔">兔 Rabbit</option>
-                                <option value="鸚鵡">鸚鵡 Parrot</option>
-                                <option value="烏龜">烏龜 Turtle</option>
-                                <option value="其他">其他 Other</option>
-                            </select>
-                        </div>
-                        <div id="pet-other-group" class="w-full hidden order-last mt-2">
-                            <input type="text" id="inp-pets-other-text" placeholder="請以英文填寫，例如：Hamster">
-                        </div>
-                        <div class="w-40 hidden" id="pet-qty-group">
-                             <label class="text-gray-500 mb-1 block">數量</label>
-                             <div class="flex border rounded-lg overflow-hidden bg-white h-[54px]">
-                                 <input type="number" id="pet-add-qty" class="w-full p-2 text-center border-none outline-none" value="1" min="1" style="font-size: 26px;">
-                                 <div class="flex gap-1 pr-1 items-center bg-gray-100">
-                                     <button type="button" onclick="adjPet(1)" class="w-12 h-full bg-gray-200 hover:bg-gray-300 font-bold text-xl">▲</button>
-                                     <button type="button" onclick="adjPet(-1)" class="w-12 h-full bg-gray-200 hover:bg-gray-300 font-bold text-xl">▼</button>
-                                 </div>
-                             </div>
-                        </div>
-                        <button type="button" onclick="addPetToList()" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 h-[54px]">新增</button>
-                    </div>
-                </div>
-
-                <!-- 5. 工人房 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">工人房 (Helper Room)</label>
-                    <select id="inp-room" onchange="toggleRoomOther()" onblur="validate(this)">
-                        <option value="" disabled selected hidden>請選擇...</option>
-                        <option value="有工人房">有工人房</option>
-                        <option value="與小孩同房">與小孩同房</option>
-                        <option value="與長者同房">與長者同房</option>
-                        <option value="與另外傭同房">與另外傭同房</option>
-                        <option value="與女僱主同房">與女僱主同房</option>
-                        <option value="其他">其他</option>
-                    </select>
-                    <input type="text" id="inp-room-other" class="mt-2 hidden" placeholder="請以英文填寫" onblur="validateOther(this, 'inp-room')">
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 6. 上班日期 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">上班日期 (Start Date)</label>
-                    <select id="inp-date" onblur="validate(this)">
-                        <option value="" disabled selected hidden>請選擇...</option>
-                        <option value="盡快">盡快</option>
-                        <option value="一月">一月</option>
-                        <option value="二月">二月</option>
-                        <option value="三月">三月</option>
-                        <option value="四月">四月</option>
-                        <option value="五月">五月</option>
-                        <option value="六月">六月</option>
-                        <option value="七月">七月</option>
-                        <option value="八月">八月</option>
-                        <option value="九月">九月</option>
-                        <option value="十月">十月</option>
-                        <option value="十一月">十一月</option>
-                        <option value="十二月">十二月</option>
-                    </select>
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 7. 薪金 (按鈕已互換) -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">薪金 (Salary)</label>
-                    <div class="flex items-center gap-3">
-                        <input type="number" id="inp-salary" class="flex-1" placeholder="例如：5100" onblur="validate(this)">
-                        <div class="flex gap-2 h-full">
-                            <!-- 互換位置：左邊變 ▲，右邊變 ▼ -->
-                            <div onclick="adjustSalary(100)" class="salary-btn rounded-l-lg border border-gray-300">▲</div>
-                            <div onclick="adjustSalary(-100)" class="salary-btn rounded-r-lg border border-gray-300">▼</div>
-                        </div>
-                    </div>
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 內部欄位：諮詢類別 -->
-                <div class="flex flex-col internal-field input-only-field mt-2">
-                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 諮詢類別 (可以多選) 外傭看不到，內部紀錄</label>
-                    <div class="flex flex-wrap gap-3" id="overseas-options"></div>
-                    <input type="hidden" id="inp-overseas-local">
-                    <div class="error-msg" id="overseas-error">此欄位必填</div>
-                </div>
-
-                <!-- 8. 國籍 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">國籍要求 (Nationality Required)</label>
-                    <select id="inp-nationality" onchange="toggleNatOther()" onblur="validate(this)">
-                        <option value="" disabled selected hidden>請選擇...</option>
-                        <option value="Filipino">菲傭 Filipino</option>
-                        <option value="Indonesian">印傭 Indonesian</option>
-                        <option value="Filipino & Indonesian">菲印 Filipino & Indonesian</option>
-                        <option value="Indonesian & Filipino">印菲 Indonesian & Filipino</option>
-                        <option value="Other">其他 (Other)</option>
-                    </select>
-                    <input type="text" id="inp-nationality-other" class="mt-2 hidden" placeholder="請以英文填寫，例如：Sri Lankans" onblur="validateOther(this, 'inp-nationality')">
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 9. 語言 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">語言要求 (Language Required)</label>
-                    <select id="inp-lang" onblur="validate(this)">
-                        <option value="" disabled selected hidden>請選擇...</option>
-                        <option value="英文">英文</option>
-                        <option value="廣東話">廣東話</option>
-                        <option value="普通話">普通話</option>
-                        <option value="英文&廣東話">英文&廣東話</option>
-                        <option value="英文&普通話">英文&普通話</option>
-                    </select>
-                    <div class="error-msg">此欄位必填</div>
-                </div>
-
-                <!-- 內部欄位：僱主要求 -->
-                <div class="flex flex-col internal-field input-only-field mt-2">
-                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主要求或留言 (如有) 外傭看不到，內部紀錄</label>
-                    <textarea id="inp-emp-req" class="h-32" placeholder="公司內部使用，不外傳"></textarea>
-                </div>
-
-                <!-- 10. 備註 -->
-                <div class="flex flex-col">
-                    <label class="font-bold text-gray-700 mb-2">公開備註給外傭看 (如有) (Remarks)</label>
-                    <textarea id="inp-remarks" class="h-32" placeholder="給外傭看，會外傳，請小心填寫，請以英文填寫"></textarea>
-                </div>
-
-                <!-- Tags Section -->
-                <div class="flex flex-col p-6 bg-pink-50 border border-pink-200 rounded-lg">
-                    <label class="font-bold text-pink-800 mb-3">加上標籤 (如有) 可以多選</label>
-                    <div id="tags-container" class="flex flex-wrap gap-3 mb-3"></div>
-                    <div class="mt-2">
-                        <input type="checkbox" id="tag-other-check" class="hidden" onchange="toggleTagOther()">
-                        <label for="tag-other-check" class="bg-white border border-pink-300 text-pink-700 px-4 py-2 rounded cursor-pointer hover:bg-pink-100 select-none">其他 Other</label>
-                        <input type="text" id="tag-other-text" class="mt-2 w-full hidden" placeholder="請以英文填寫" onblur="validateTagOther(this)">
-                        <div class="error-msg" id="tag-other-error">此欄位必填</div>
-                    </div>
-                </div>
-
-                <!-- 內部欄位群組 (Input Only) -->
-                <div class="flex flex-col gap-6 mt-4 input-only-field">
-                    <div class="flex flex-col internal-field">
-                        <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主姓名 (外傭看不到，內部紀錄)</label>
-                        <input type="text" id="inp-emp-name" onblur="validate(this)">
-                        <div class="error-msg">此欄位必填</div>
-                    </div>
-                    <div class="flex flex-col internal-field">
-                        <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主語言 (外傭看不到，內部紀錄)</label>
-                        <select id="inp-emp-lang" onblur="validate(this)">
-                            <option value="">請選擇...</option>
-                            <option value="英文">英文</option>
-                            <option value="廣東話">廣東話</option>
-                            <option value="普通話">普通話</option>
-                            <option value="普通話但識廣東話">普通話但識廣東話</option>
-                        </select>
-                        <div class="error-msg">此欄位必填</div>
-                    </div>
-                    <div class="flex flex-col internal-field">
-                        <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主電話 (外傭看不到，內部紀錄)</label>
-                        <input type="text" id="inp-emp-phone" onblur="validate(this)">
-                        <div class="error-msg">此欄位必填</div>
-                    </div>
-                    <div class="flex flex-col internal-field">
-                        <label class="internal-label"><i class="fa-solid fa-lock"></i> 查詢日期 (外傭看不到，內部紀錄)</label>
-                        <!-- 日期圖示在左邊 -->
-                        <input type="date" id="inp-inquiry-date" class="date-left-icon" onblur="validate(this)">
-                        <div class="error-msg">此欄位必填</div>
-                    </div>
-                    <div class="flex flex-col internal-field">
-                        <label class="internal-label"><i class="fa-solid fa-lock"></i> 介紹人 (外傭看不到，內部紀錄)</label>
-                        <input type="text" id="inp-referrer" placeholder="例如：舊客E1234、Google廣告" onblur="validate(this)">
-                        <div class="error-msg">此欄位必填</div>
-                    </div>
-                </div>
-
-                <button type="button" onclick="handleSave()" id="btn-save" class="w-full bg-green-600 text-white font-bold py-5 rounded-xl hover:bg-green-700 mt-10 shadow transition">
-                    <i class="fa-solid fa-upload mr-2"></i> <span id="btn-save-text">上載資料</span>
-                </button>
-            </form>
-			<div id="fishing-footer" class="hidden">
-    		<!-- 這裡放你的內容 -->
-		</div>
-        </div>
-
+        <!-- LIST AREA -->
         <div id="admin-list-area" class="hidden">
             <h3 class="font-bold text-blue-900 mb-6">已上載的資料 <span id="db-status-text" class="font-normal text-gray-500"></span></h3>
             <div id="admin-records-container" class="space-y-8"></div>
-            <!-- Pagination for Admin -->
             <div id="admin-pagination" class="flex justify-center items-center gap-8 mt-10 hidden">
                 <button onclick="changeAdminPage(-1)" class="px-6 py-3 bg-white border rounded hover:bg-gray-100">Prev</button>
                 <span id="admin-page-indicator" class="font-bold text-gray-700">Page 1</span>
                 <button onclick="changeAdminPage(1)" class="px-6 py-3 bg-white border rounded hover:bg-gray-100">Next</button>
             </div>
         </div>
+
+        <!-- INPUT / FISHING AREA -->
+        <div id="admin-input-area" class="bg-white p-8 rounded-xl shadow-md hidden">
+            <div id="fishing-header" class="hidden mb-8 bg-purple-50 p-6 rounded-lg border border-purple-200 flex justify-between items-center">
+                <span class="font-bold text-purple-800">🎬 釣魚盤模式 (隨機生成)</span>
+                <button onclick="generateFishingData()" class="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition">重新生成數據</button>
+            </div>
+
+            <div id="clear-btn-container" class="mb-4 flex flex-col sm:flex-row justify-start items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <button type="button" onclick="clearInputForm('input')" class="bg-red-50 text-red-600 px-4 py-2 rounded border border-red-200 hover:bg-red-100 font-bold whitespace-nowrap">
+                    <i class="fa-solid fa-trash mr-1"></i> 清除內容
+                </button>
+                <!-- Red Text -->
+                <span class="text-sm text-red-600 font-bold">每次輸入新資料前，先按一按「清除內容」按鈕</span>
+            </div>
+
+            <!-- Main Form Container -->
+            <div id="form-container-main"></div>
+            
+            <!-- Fishing footer that was missing -->
+            <div id="fishing-footer" class="hidden mt-4 p-4 bg-purple-50 text-purple-700 rounded text-center font-bold">
+                釣魚盤模式生效中
+            </div>
+        </div>
+
+        <!-- EDIT AREA (Independent Page) -->
+        <div id="admin-edit-area" class="bg-white p-8 rounded-xl shadow-md hidden">
+            <div id="edit-header" class="mb-8 p-6 rounded-t-lg flex justify-between items-center">
+                <span class="font-bold text-orange-800"><i class="fa-solid fa-pen-to-square"></i> 修改資料模式</span>
+                <button onclick="closeEditMode()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">取消修改</button>
+            </div>
+            <!-- Edit Form Container (Will be populated by JS) -->
+            <div id="form-container-edit"></div>
+        </div>
+
     </section>
 
     <!-- 3. 公開頁面 -->
@@ -536,25 +303,272 @@
                 <span id="page-indicator" class="font-bold text-gray-700 self-center">Page 1</span>
                 <button onclick="changePage(1)" id="btn-next" class="px-8 py-4 bg-white border rounded-lg hover:bg-gray-100 font-bold shadow">Next</button>
             </div>
-            <!-- Footer Message -->
             <div id="public-footer-msg" class="w-full max-w-5xl p-4 bg-blue-50 text-black text-center rounded-lg mt-4 hidden"></div>
-            <!-- Version Number -->
-            <div class="text-center text-gray-400 mt-10 mb-4">V1.14</div>
+            <!-- Version Update -->
+            <div class="text-center text-gray-400 mt-10 mb-4">V1.17</div>
         </div>
     </section>
 
+    <!-- Form Template (Hidden, used to clone) -->
+    <template id="form-template">
+        <form class="employer-form space-y-8">
+            <input type="hidden" class="edit-doc-id"> 
+            
+            <!-- 1. 僱主編號 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2 label-id">僱主編號 (編號以E開始，例如：E2805)</label>
+                <input type="text" class="inp-id bg-gray-50" placeholder="例如：E2805" onblur="validate(this)">
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 2. 家庭成員 -->
+            <div class="flex flex-col p-6 bg-gray-50 rounded-lg border">
+                <label class="font-bold text-gray-700 mb-3">家庭成員及年齡 (可以多選)</label>
+                <div class="member-list-display mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
+                <input type="hidden" class="inp-members-string" onblur="validateMember(this)">
+                <div class="error-msg member-error">請至少新增一位家庭成員</div>
+                
+                <div class="flex gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="text-gray-500 mb-1 block">成員類型</label>
+                        <select class="mem-type" onchange="toggleAgeInput(this)">
+                            <option value="成人">成人 Adult</option>
+                            <option value="小孩">小孩 Child</option>
+                            <option value="男孩">男孩 Boy</option>
+                            <option value="女孩">女孩 Girl</option>
+                            <option value="雙胞胎">雙胞胎 Twins</option>
+                            <option value="三胞胎">三胞胎 Triplets</option>
+                            <option value="長者">長者 Elderly</option>
+                            <option value="公公">公公 Grandpa</option>
+                            <option value="婆婆">婆婆 Grandma</option>
+                        </select>
+                    </div>
+                    <div class="w-32 hidden age-input-group">
+                        <label class="text-gray-500 mb-1 block">年齡</label>
+                        <input type="number" class="mem-age" placeholder="歲">
+                    </div>
+                    <button type="button" onclick="addMember(this)" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 h-full">新增</button>
+                </div>
+            </div>
+
+            <!-- 3. 地區 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">僱主地區 (Employer Location)</label>
+                <input type="text" class="inp-location" placeholder="例如：將軍澳" onblur="validate(this)">
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 內部欄位：單位呎數 -->
+            <div class="flex flex-col internal-field input-only-field">
+                <label class="internal-label"><i class="fa-solid fa-lock"></i> 單位呎數 (外傭看不到，內部紀錄)</label>
+                <input type="text" class="inp-flat-size" placeholder="例如：500呎" onblur="validate(this)">
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 4. 寵物 -->
+            <div class="flex flex-col p-6 bg-gray-50 rounded-lg border">
+                <label class="font-bold text-gray-700 mb-3">寵物 (可以多選)</label>
+                <div class="pet-list-display mb-3 flex flex-wrap gap-3 min-h-[40px]"></div>
+                <input type="hidden" class="inp-pets-string" onblur="validatePet(this)">
+                <div class="error-msg pet-error">請至少新增一項寵物資料(或選無)</div>
+                
+                <div class="flex gap-4 items-end flex-wrap">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="text-gray-500 mb-1 block">寵物類型</label>
+                        <select class="pet-add-type" onchange="togglePetInputs(this)">
+                            <option value="" disabled selected hidden>請選擇...</option>
+                            <option value="沒有寵物">沒有寵物</option>
+                            <option value="小狗">小狗 Small Dog</option>
+                            <option value="中狗">中狗 Medium Dog</option>
+                            <option value="大狗">大狗 Big Dog</option>
+                            <option value="貓">貓 Cat</option>
+                            <option value="兔">兔 Rabbit</option>
+                            <option value="鸚鵡">鸚鵡 Parrot</option>
+                            <option value="烏龜">烏龜 Turtle</option>
+                            <option value="其他">其他 Other</option>
+                        </select>
+                    </div>
+                    <div class="w-full hidden order-last mt-2 pet-other-group">
+                        <input type="text" class="inp-pets-other-text" placeholder="請以英文填寫，例如：Hamster">
+                    </div>
+                    <div class="w-40 hidden pet-qty-group">
+                            <label class="text-gray-500 mb-1 block">數量</label>
+                            <div class="flex border rounded-lg overflow-hidden bg-white h-[54px]">
+                                <input type="number" class="pet-add-qty w-full p-2 text-center border-none outline-none" value="1" min="1" style="font-size: 26px;">
+                                <div class="flex gap-1 pr-1 items-center bg-gray-100">
+                                    <button type="button" onclick="adjPet(this, 1)" class="w-12 h-full bg-gray-200 hover:bg-gray-300 font-bold text-xl">▲</button>
+                                    <button type="button" onclick="adjPet(this, -1)" class="w-12 h-full bg-gray-200 hover:bg-gray-300 font-bold text-xl">▼</button>
+                                </div>
+                            </div>
+                    </div>
+                    <button type="button" onclick="addPetToList(this)" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 h-[54px]">新增</button>
+                </div>
+            </div>
+
+            <!-- 5. 工人房 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">工人房 (Helper Room)</label>
+                <select class="inp-room" onchange="toggleRoomOther(this)" onblur="validate(this)">
+                    <option value="" disabled selected hidden>請選擇...</option>
+                    <option value="有工人房">有工人房</option>
+                    <option value="與小孩同房">與小孩同房</option>
+                    <option value="與長者同房">與長者同房</option>
+                    <option value="與另外傭同房">與另外傭同房</option>
+                    <option value="與女僱主同房">與女僱主同房</option>
+                    <option value="其他">其他</option>
+                </select>
+                <input type="text" class="inp-room-other mt-2 hidden" placeholder="請以英文填寫" onblur="validateOther(this, '.inp-room')">
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 6. 上班日期 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">上班日期 (Start Date)</label>
+                <select class="inp-date" onblur="validate(this)">
+                    <option value="" disabled selected hidden>請選擇...</option>
+                    <option value="盡快">盡快</option>
+                    <option value="一月">一月</option>
+                    <option value="二月">二月</option>
+                    <option value="三月">三月</option>
+                    <option value="四月">四月</option>
+                    <option value="五月">五月</option>
+                    <option value="六月">六月</option>
+                    <option value="七月">七月</option>
+                    <option value="八月">八月</option>
+                    <option value="九月">九月</option>
+                    <option value="十月">十月</option>
+                    <option value="十一月">十一月</option>
+                    <option value="十二月">十二月</option>
+                </select>
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 7. 薪金 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">薪金 (Salary)</label>
+                <div class="flex items-center gap-3">
+                    <input type="number" class="inp-salary flex-1" placeholder="例如：5100" onblur="validate(this)">
+                    <div class="flex gap-2 h-full">
+                        <div onclick="adjustSalary(this, 100)" class="salary-btn rounded-l-lg border border-gray-300">▲</div>
+                        <div onclick="adjustSalary(this, -100)" class="salary-btn rounded-r-lg border border-gray-300">▼</div>
+                    </div>
+                </div>
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 內部欄位：諮詢類別 -->
+            <div class="flex flex-col internal-field input-only-field mt-2">
+                <label class="internal-label"><i class="fa-solid fa-lock"></i> 諮詢類別 (可以多選) 外傭看不到，內部紀錄</label>
+                <div class="flex flex-wrap gap-3 overseas-options"></div>
+                <input type="hidden" class="inp-overseas-local">
+                <div class="error-msg overseas-error">此欄位必填</div>
+            </div>
+
+            <!-- 8. 國籍 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">國籍要求 (Nationality Required)</label>
+                <select class="inp-nationality" onchange="toggleNatOther(this)" onblur="validate(this)">
+                    <option value="" disabled selected hidden>請選擇...</option>
+                    <option value="Filipino">菲傭 Filipino</option>
+                    <option value="Indonesian">印傭 Indonesian</option>
+                    <option value="Filipino & Indonesian">菲印 Filipino & Indonesian</option>
+                    <option value="Indonesian & Filipino">印菲 Indonesian & Filipino</option>
+                    <option value="Other">其他 (Other)</option>
+                </select>
+                <input type="text" class="inp-nationality-other mt-2 hidden" placeholder="請以英文填寫，例如：Sri Lankans" onblur="validateOther(this, '.inp-nationality')">
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 9. 語言 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">語言要求 (Language Required)</label>
+                <select class="inp-lang" onblur="validate(this)">
+                    <option value="" disabled selected hidden>請選擇...</option>
+                    <option value="英文">英文</option>
+                    <option value="廣東話">廣東話</option>
+                    <option value="普通話">普通話</option>
+                    <option value="英文&廣東話">英文&廣東話</option>
+                    <option value="英文&普通話">英文&普通話</option>
+                </select>
+                <div class="error-msg">此欄位必填</div>
+            </div>
+
+            <!-- 內部欄位：僱主要求 -->
+            <div class="flex flex-col internal-field input-only-field mt-2">
+                <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主要求或留言 (如有) 外傭看不到，內部紀錄</label>
+                <textarea class="inp-emp-req h-32" placeholder="公司內部使用，不外傳"></textarea>
+            </div>
+
+            <!-- 10. 備註 -->
+            <div class="flex flex-col">
+                <label class="font-bold text-gray-700 mb-2">公開備註給外傭看 (如有) (Remarks)</label>
+                <textarea class="inp-remarks h-32" placeholder="給外傭看，會外傳，請小心填寫，請以英文填寫"></textarea>
+            </div>
+
+            <!-- Tags Section -->
+            <div class="flex flex-col p-6 bg-pink-50 border border-pink-200 rounded-lg">
+                <label class="font-bold text-pink-800 mb-3">加上標籤 (如有) 可以多選</label>
+                <div class="tags-container flex flex-wrap gap-3 mb-3"></div>
+                <div class="mt-2 tag-other-div">
+                    <input type="checkbox" class="hidden tag-other-check" onchange="toggleTagOther(this)">
+                    <label class="bg-white border border-pink-300 text-pink-700 px-4 py-2 rounded cursor-pointer hover:bg-pink-100 select-none tag-other-label">其他 Other</label>
+                    <input type="text" class="mt-2 w-full hidden tag-other-text" placeholder="請以英文填寫" onblur="validateTagOther(this)">
+                    <div class="error-msg tag-other-error">此欄位必填</div>
+                </div>
+            </div>
+
+            <!-- 內部欄位群組 (Input Only) -->
+            <div class="flex flex-col gap-6 mt-4 input-only-field">
+                <div class="flex flex-col internal-field">
+                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主姓名 (外傭看不到，內部紀錄)</label>
+                    <input type="text" class="inp-emp-name" onblur="validate(this)">
+                    <div class="error-msg">此欄位必填</div>
+                </div>
+                <div class="flex flex-col internal-field">
+                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主語言 (外傭看不到，內部紀錄)</label>
+                    <select class="inp-emp-lang" onblur="validate(this)">
+                        <option value="">請選擇...</option>
+                        <option value="英文">英文</option>
+                        <option value="廣東話">廣東話</option>
+                        <option value="普通話">普通話</option>
+                        <option value="普通話但識廣東話">普通話但識廣東話</option>
+                    </select>
+                    <div class="error-msg">此欄位必填</div>
+                </div>
+                <div class="flex flex-col internal-field">
+                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 僱主電話 (外傭看不到，內部紀錄)</label>
+                    <input type="text" class="inp-emp-phone" onblur="validate(this)">
+                    <div class="error-msg">此欄位必填</div>
+                </div>
+                <div class="flex flex-col internal-field">
+                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 查詢日期 (外傭看不到，內部紀錄)</label>
+                    <input type="date" class="inp-inquiry-date date-left-icon" onblur="validate(this)">
+                    <div class="error-msg">此欄位必填</div>
+                </div>
+                <div class="flex flex-col internal-field">
+                    <label class="internal-label"><i class="fa-solid fa-lock"></i> 介紹人 (外傭看不到，內部紀錄)</label>
+                    <input type="text" class="inp-referrer" placeholder="例如：舊客E1234、Google廣告" onblur="validate(this)">
+                    <div class="error-msg">此欄位必填</div>
+                </div>
+            </div>
+
+            <button type="button" onclick="handleSave(this)" class="btn-save w-full bg-green-600 text-white font-bold py-5 rounded-xl hover:bg-green-700 mt-10 shadow transition">
+                <i class="fa-solid fa-upload mr-2"></i> <span class="btn-save-text">上載資料</span>
+            </button>
+        </form>
+    </template>
+
     <script>
-        let employers = [];
+        let employers = []; // Real employers (E)
+        let fishingData = []; // Fishing data (U)
         const PASSWORD = 'admin@ADA2018';
         let currentPage = 1;
         let currentAdminPage = 1;
         const itemsPerPage = 10;
         let currentLang = 'english';
-        const LOCAL_STORAGE_KEY = 'horizon_employers_offline_v8';
-        const LAST_ID_KEY = 'horizon_last_id_num';
         
-        let currentAdminSub = 'input';
-        let inputCache = null;
+        let currentAdminSub = 'list';
+        let activeFormId = null; // 'form-main' or 'form-edit'
 
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('main-nav');
@@ -573,6 +587,8 @@
             "推輪椅 Wheelchair", "走路緩慢 Walking slowly", "餵藥 Medication feeding", "沖涼 Bathing assistance",
             "中風 Stroke", "老人痴呆 Alzheimer's disease", "柏金遜病 Parkinson's disease", "續約優先 Renewal priority"
         ];
+
+        const fishingTags = ["急 Urgent", "高薪 High salary", "近地鐵 Near MTR", "大學 University", "好僱主 Good employer"];
         
         const tagMapIndo = {
             "急 Urgent": "Mendesak", "高薪 High salary": "Gaji tinggi", "近地鐵 Near MTR": "Dekat MTR", "大學 University": "Universitas", "好僱主 Good employer": "Majikan baik",
@@ -621,27 +637,152 @@
             '其他': { en: 'Other', id: 'Lainnya' }, '沒有寵物': { en: 'No Pets', id: 'Tidak ada hewan peliharaan' }
         };
 
+        // Form Manager Class to handle multiple forms (Input vs Edit)
+        class FormManager {
+            constructor(containerId, isEdit = false) {
+                this.container = document.getElementById(containerId);
+                const template = document.getElementById('form-template');
+                this.container.appendChild(template.content.cloneNode(true));
+                this.form = this.container.querySelector('form');
+                this.isEdit = isEdit;
+                this.members = [];
+                this.pets = [];
+                this.initListeners();
+            }
+
+            initListeners() {
+                // Initialize Tags
+                const tagCont = this.form.querySelector('.tags-container');
+                tagCont.innerHTML = tagList.map(t => {
+                    const id = `tag-${Math.random().toString(36).substr(2, 9)}`;
+                    return `
+                        <div class="mb-2">
+                            <input type="checkbox" id="${id}" value="${t}" class="hidden tag-checkbox">
+                            <label for="${id}" class="bg-white border border-pink-300 text-pink-700 px-4 py-2 rounded cursor-pointer hover:bg-pink-100 select-none">${t}</label>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Assign unique ID to tag-other-check for label mapping
+                const otCheck = this.form.querySelector('.tag-other-check');
+                const otLabel = this.form.querySelector('.tag-other-label');
+                const uniqueOtId = `tag-other-${Math.random().toString(36).substr(2, 9)}`;
+                otCheck.id = uniqueOtId;
+                otLabel.setAttribute('for', uniqueOtId);
+
+                // Initialize Overseas Options
+                const osCont = this.form.querySelector('.overseas-options');
+                osCont.innerHTML = overseasList.map(o => `
+                    <label class="inline-flex items-center bg-white border px-4 py-2 rounded cursor-pointer border-blue-200">
+                        <input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600 overseas-check" value="${o}">
+                        <span class="ml-2">${o}</span>
+                    </label>
+                `).join('');
+
+                // Date default
+                if(!this.isEdit) this.form.querySelector('.inp-inquiry-date').valueAsDate = new Date();
+            }
+
+            reset() {
+                this.form.reset();
+                this.members = [];
+                this.pets = [];
+                this.updateMemberDisplay();
+                this.updatePetDisplay();
+                // Reset UI states
+                this.form.querySelector('.tag-other-text').classList.add('hidden');
+                this.form.querySelector('.inp-room-other').classList.add('hidden');
+                this.form.querySelector('.inp-nationality-other').classList.add('hidden');
+                this.form.querySelector('.pet-other-group').classList.add('hidden');
+                this.form.querySelector('.pet-qty-group').classList.add('hidden');
+                this.form.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
+                this.form.querySelectorAll('.overseas-check').forEach(c => c.checked = false);
+                this.form.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+                this.form.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
+                
+                if(!this.isEdit) {
+                    this.form.querySelector('.inp-inquiry-date').valueAsDate = new Date();
+                }
+            }
+
+            updateMemberDisplay() {
+                const c = this.form.querySelector('.member-list-display');
+                c.innerHTML = this.members.map((m,i)=>`<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded flex items-center gap-2">${m.text} <button type="button" class="text-red-500 font-bold px-1 btn-rm-mem" data-idx="${i}">&times;</button></span>`).join('');
+                this.form.querySelector('.inp-members-string').value = this.members.map(m=>m.text).join(', ');
+                
+                // Add event listeners for remove buttons
+                c.querySelectorAll('.btn-rm-mem').forEach(btn => {
+                    btn.onclick = () => {
+                        this.members.splice(btn.dataset.idx, 1);
+                        this.updateMemberDisplay();
+                        validateMember(this.form.querySelector('.inp-members-string'));
+                    };
+                });
+            }
+
+            updatePetDisplay() {
+                const c = this.form.querySelector('.pet-list-display');
+                if(this.pets.length===0) { c.innerHTML='<span class="text-gray-400 italic">尚未新增</span>'; this.form.querySelector('.inp-pets-string').value=''; }
+                else { 
+                    c.innerHTML=this.pets.map((p,i)=>`<span class="bg-green-100 text-green-800 px-3 py-1 rounded flex items-center gap-2">${p.text} <button type="button" class="text-red-500 font-bold px-1 btn-rm-pet" data-idx="${i}">&times;</button></span>`).join(''); 
+                    this.form.querySelector('.inp-pets-string').value=this.pets.map(p=>p.text).join(', '); 
+                }
+                c.querySelectorAll('.btn-rm-pet').forEach(btn => {
+                    btn.onclick = () => {
+                        this.pets.splice(btn.dataset.idx, 1);
+                        this.updatePetDisplay();
+                        validatePet(this.form.querySelector('.inp-pets-string'));
+                    };
+                });
+            }
+        }
+
+        let mainForm, editForm;
+
         window.initApp = async function() {
             document.getElementById('loading-overlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-            renderTags(); renderOverseasOptions();
-            document.getElementById('inp-inquiry-date').valueAsDate = new Date();
 
+            // Initialize Forms
+            mainForm = new FormManager('form-container-main', false);
+            editForm = new FormManager('form-container-edit', true);
+
+            // Initialize Data from 2 Collections
             if (window.isFirebaseMode && window.db) {
-                const q = window.query(window.collection(window.db, "employers"));
-                window.onSnapshot(q, (snapshot) => {
+                // Collection 1: Employers List (E)
+                const q1 = window.query(window.collection(window.db, "Employers List"));
+                window.onSnapshot(q1, (snapshot) => {
                     employers = [];
                     snapshot.forEach((doc) => employers.push({ ...doc.data(), docId: doc.id }));
                     employers.sort((a, b) => a.id.localeCompare(b.id));
                     refreshCurrentView();
                 });
+
+                // Collection 2: Fishing List (U)
+                const q2 = window.query(window.collection(window.db, "Fishing List"));
+                window.onSnapshot(q2, (snapshot) => {
+                    fishingData = [];
+                    snapshot.forEach((doc) => fishingData.push({ ...doc.data(), docId: doc.id }));
+                    fishingData.sort((a, b) => a.id.localeCompare(b.id));
+                    refreshCurrentView();
+                });
             } else {
-                const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (data) employers = JSON.parse(data);
+                const data = localStorage.getItem(LOCAL_STORAGE_KEY); // Fallback offline
+                if (data) {
+                    const all = JSON.parse(data);
+                    employers = all.filter(e => !e.id.startsWith('U'));
+                    fishingData = all.filter(e => e.id.startsWith('U'));
+                }
                 refreshCurrentView();
             }
-            switchTab('english');
+            switchTab('admin'); // Changed default to admin list logic below
+            switchAdminSub('list'); // Default to list
         };
+
+        function getAllEmployers() {
+            return [...employers, ...fishingData].sort((a, b) => a.id.localeCompare(b.id));
+        }
+
         function refreshCurrentView() {
             if(!document.getElementById('admin-list-area').classList.contains('hidden')) renderAdminList();
             if(!document.getElementById('page-public').classList.contains('hidden')) renderPublicList();
@@ -649,141 +790,72 @@
 
         function getNextId(prefix) {
             let max = 0;
-            if (prefix === 'E') max = 2804; 
-            if (prefix === 'U') max = 1000; 
-
-            employers.forEach(e => {
-                if (e.id && e.id.startsWith(prefix)) {
+            const targetList = prefix === 'E' ? employers : fishingData;
+            
+            // Safety: also check across all just in case
+            targetList.forEach(e => {
+                if (e.id && e.id.toUpperCase().startsWith(prefix)) {
                     const numPart = parseInt(e.id.substring(1));
-                    if (!isNaN(numPart) && numPart > max) {
-                        max = numPart;
-                    }
+                    if (!isNaN(numPart) && numPart > max) max = numPart;
                 }
             });
+            
+            // Set base if empty
+            if (max === 0) {
+                if (prefix === 'E') max = 2804;
+                if (prefix === 'U') max = 1000;
+            }
+            
             return prefix + (max + 1);
         }
 
-        function renderTags() {
-            const c = document.getElementById('tags-container');
-            c.innerHTML = tagList.map(t => `
-                <div class="mb-2">
-                    <input type="checkbox" id="tag-${t}" value="${t}" class="hidden tag-checkbox">
-                    <label for="tag-${t}" class="bg-white border border-pink-300 text-pink-700 px-4 py-2 rounded cursor-pointer hover:bg-pink-100 select-none">${t}</label>
-                </div>
-            `).join('');
-        }
-        function renderOverseasOptions() {
-            const c = document.getElementById('overseas-options');
-            c.innerHTML = overseasList.map(o => `
-                <label class="inline-flex items-center bg-white border px-4 py-2 rounded cursor-pointer border-blue-200">
-                    <input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600 overseas-check" value="${o}">
-                    <span class="ml-2">${o}</span>
-                </label>
-            `).join('');
-        }
-        window.toggleTagOther = function() {
-            const chk = document.getElementById('tag-other-check');
-            const inp = document.getElementById('tag-other-text');
-            const err = document.getElementById('tag-other-error');
-            if(chk.checked) inp.classList.remove('hidden'); else { inp.classList.add('hidden'); err.classList.remove('visible'); }
+        // --- UI Logic Helpers ---
+        window.toggleTagOther = function(el) {
+            const form = el.closest('form');
+            const inp = form.querySelector('.tag-other-text');
+            const err = form.querySelector('.tag-other-error');
+            if(el.checked) inp.classList.remove('hidden'); else { inp.classList.add('hidden'); err.classList.remove('visible'); }
         }
 
-        window.validate = function(el) {
-            if(document.getElementById('fishing-header').classList.contains('hidden') === false) { return; }
-            
-            const idVal = document.getElementById('inp-id').value.trim();
-            const isU = idVal.toUpperCase().startsWith('U');
-            if (isU && el.closest('.input-only-field')) {
-                el.classList.remove('input-error'); 
-                const err = el.parentElement.querySelector('.error-msg');
-                if(err) err.classList.remove('visible');
-                return;
-            }
-
-            const err = el.parentElement.querySelector('.error-msg');
-            if(!el.value) { el.classList.add('input-error'); if(err) err.classList.add('visible'); } 
-            else { el.classList.remove('input-error'); if(err) err.classList.remove('visible'); }
-        }
-        window.validateMember = function(el) {
-            if(!document.getElementById('fishing-header').classList.contains('hidden')) return;
-            const err = document.getElementById('member-error');
-            if(!el.value) err.classList.add('visible'); else err.classList.remove('visible');
-        }
-        window.validatePet = function(el) {
-            if(!document.getElementById('fishing-header').classList.contains('hidden')) return;
-            const err = document.getElementById('pet-error');
-            if(!el.value) err.classList.add('visible'); else err.classList.remove('visible');
-        }
-        window.validateTagOther = function(el) {
-            if(!document.getElementById('fishing-header').classList.contains('hidden')) return;
-            const chk = document.getElementById('tag-other-check');
-            const err = document.getElementById('tag-other-error');
-            if(chk.checked && !el.value) { el.classList.add('input-error'); err.classList.add('visible'); }
-            else { el.classList.remove('input-error'); err.classList.remove('visible'); }
-        }
-        window.validateOverseas = function() {
-            if(!document.getElementById('fishing-header').classList.contains('hidden')) return true;
-            
-            const idVal = document.getElementById('inp-id').value.trim();
-            if (idVal.toUpperCase().startsWith('U')) return true;
-
-            const chks = document.querySelectorAll('.overseas-check:checked');
-            const err = document.getElementById('overseas-error');
-            if(chks.length === 0) { err.classList.add('visible'); return false; }
-            else { err.classList.remove('visible'); return true; }
-        }
-        window.validateOther = function(el, selectId) {
-            const select = document.getElementById(selectId);
-            const err = el.parentElement.querySelector('.error-msg');
-            if(select.value === '其他' || select.value === 'Other') {
-                if(!el.value) { el.classList.add('input-error'); if(err) err.classList.add('visible'); }
-                else { el.classList.remove('input-error'); if(err) err.classList.remove('visible'); }
-            }
-        }
-
-        let currentPets = [];
-        window.adjPet = function(v) { let el=document.getElementById('pet-add-qty'); let n=parseInt(el.value)+v; if(n<1)n=1; el.value=n; }
-        window.togglePetInputs = function() {
-            const type = document.getElementById('pet-add-type').value;
-            const qtyGroup = document.getElementById('pet-qty-group');
-            const otherGroup = document.getElementById('pet-other-group');
+        window.togglePetInputs = function(el) {
+            const form = el.closest('form');
+            const type = el.value;
+            const qtyGroup = form.querySelector('.pet-qty-group');
+            const otherGroup = form.querySelector('.pet-other-group');
             qtyGroup.classList.add('hidden'); otherGroup.classList.add('hidden');
             if(type === '其他') { otherGroup.classList.remove('hidden'); qtyGroup.classList.remove('hidden'); }
             else if(type !== '沒有寵物' && type !== '') { qtyGroup.classList.remove('hidden'); }
         }
-        window.addPetToList = function() {
-            const type = document.getElementById('pet-add-type').value;
-            const qty = document.getElementById('pet-add-qty').value;
-            if (!type) { alert('請選擇寵物類型'); return; }
-            if (type === '沒有寵物') { currentPets = [{text: '沒有寵物'}]; } 
-            else {
-                if(currentPets.length===1 && currentPets[0].text==='沒有寵物') currentPets=[];
-                if(type === '其他') {
-                    const ot = document.getElementById('inp-pets-other-text').value;
-                    if(!ot) { alert('請填寫寵物類型'); return; }
-                    currentPets.push({text: `${qty}${ot}`});
-                    document.getElementById('inp-pets-other-text').value='';
-                } else { currentPets.push({text: `${qty}${type}`}); }
-            }
-            updatePetDisplay();
-            window.validatePet(document.getElementById('inp-pets-string'));
-        }
-        window.removePet = function(idx) { currentPets.splice(idx, 1); updatePetDisplay(); window.validatePet(document.getElementById('inp-pets-string')); }
-        function updatePetDisplay() {
-            const c = document.getElementById('pet-list-display');
-            if(currentPets.length===0) { c.innerHTML='<span class="text-gray-400 italic">尚未新增</span>'; document.getElementById('inp-pets-string').value=''; }
-            else { c.innerHTML=currentPets.map((p,i)=>`<span class="bg-green-100 text-green-800 px-3 py-1 rounded flex items-center gap-2">${p.text} <button type="button" onclick="removePet(${i})" class="text-red-500 font-bold px-1">&times;</button></span>`).join(''); document.getElementById('inp-pets-string').value=currentPets.map(p=>p.text).join(', '); }
-        }
 
-        let currentMembers = [];
-        window.toggleAgeInput = function() {
-            const type = document.getElementById('mem-type').value;
-            const group = document.getElementById('age-input-group');
+        window.toggleAgeInput = function(el) {
+            const form = el.closest('form');
+            const type = el.value;
+            const group = form.querySelector('.age-input-group');
             if(type === '成人') group.classList.add('hidden'); else group.classList.remove('hidden');
         }
-        window.addMember = function() {
-            const type = document.getElementById('mem-type').value;
-            const age = document.getElementById('mem-age').value;
+
+        window.toggleRoomOther = function(el) { const form = el.closest('form'); if(el.value==='其他') form.querySelector('.inp-room-other').classList.remove('hidden'); else form.querySelector('.inp-room-other').classList.add('hidden'); }
+        window.toggleNatOther = function(el) { const form = el.closest('form'); if(el.value==='Other') form.querySelector('.inp-nationality-other').classList.remove('hidden'); else form.querySelector('.inp-nationality-other').classList.add('hidden'); }
+
+        window.adjPet = function(btn, v) { 
+            const form = btn.closest('form');
+            let el=form.querySelector('.pet-add-qty'); 
+            let n=parseInt(el.value)+v; if(n<1)n=1; el.value=n; 
+        }
+
+        window.adjustSalary = function(btn, val) { 
+            const form = btn.closest('form');
+            let el = form.querySelector('.inp-salary'); 
+            let v = parseInt(el.value); if(isNaN(v)) v = 5100; v += val; if(v < 5100) v = 5100; el.value = v; 
+            validate(el); 
+        }
+
+        window.addMember = function(btn) {
+            const form = btn.closest('form');
+            const mgr = form === mainForm.form ? mainForm : editForm;
+            const type = form.querySelector('.mem-type').value;
+            const age = form.querySelector('.mem-age').value;
+            
             if(type !== '成人' && !age) { alert('請輸入年齡'); return; }
             
             let text = "";
@@ -792,192 +864,132 @@
             else if (type === '三胞胎') text = `1三胞胎(${age}歲)`;
             else text = `1${type}(${age}歲)`;
             
-            currentMembers.push({text});
-            updateMemberDisplay();
-            document.getElementById('mem-age').value='';
-            window.validateMember(document.getElementById('inp-members-string'));
-        }
-        window.removeMember = function(i) { currentMembers.splice(i, 1); updateMemberDisplay(); window.validateMember(document.getElementById('inp-members-string')); }
-        function updateMemberDisplay() {
-            const c = document.getElementById('member-list-display');
-            c.innerHTML = currentMembers.map((m,i)=>`<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded flex items-center gap-2">${m.text} <button type="button" onclick="removeMember(${i})" class="text-red-500 font-bold px-1">&times;</button></span>`).join('');
-            let s = currentMembers.map(m=>m.text);
-            document.getElementById('inp-members-string').value = s.join(', ');
+            mgr.members.push({text});
+            mgr.updateMemberDisplay();
+            form.querySelector('.mem-age').value='';
+            validateMember(form.querySelector('.inp-members-string'));
         }
 
-        window.toggleRoomOther = function() { const v = document.getElementById('inp-room').value; if(v==='其他') document.getElementById('inp-room-other').classList.remove('hidden'); else document.getElementById('inp-room-other').classList.add('hidden'); }
-        window.toggleNatOther = function() { const v = document.getElementById('inp-nationality').value; if(v==='Other') document.getElementById('inp-nationality-other').classList.remove('hidden'); else document.getElementById('inp-nationality-other').classList.add('hidden'); }
-        window.adjustSalary = function(val) { let el = document.getElementById('inp-salary'); let v = parseInt(el.value); if(isNaN(v)) v = 5100; v += val; if(v < 5100) v = 5100; el.value = v; window.validate(el); }
-        
-        window.clearInputForm = function() {
+        window.addPetToList = function(btn) {
+            const form = btn.closest('form');
+            const mgr = form === mainForm.form ? mainForm : editForm;
+            const type = form.querySelector('.pet-add-type').value;
+            const qty = form.querySelector('.pet-add-qty').value;
+            
+            if (!type) { alert('請選擇寵物類型'); return; }
+            if (type === '沒有寵物') { mgr.pets = [{text: '沒有寵物'}]; } 
+            else {
+                if(mgr.pets.length===1 && mgr.pets[0].text==='沒有寵物') mgr.pets=[];
+                if(type === '其他') {
+                    const ot = form.querySelector('.inp-pets-other-text').value;
+                    if(!ot) { alert('請填寫寵物類型'); return; }
+                    mgr.pets.push({text: `${qty}${ot}`});
+                    form.querySelector('.inp-pets-other-text').value='';
+                } else { mgr.pets.push({text: `${qty}${type}`}); }
+            }
+            mgr.updatePetDisplay();
+            validatePet(form.querySelector('.inp-pets-string'));
+        }
+
+        // --- Validation ---
+        window.validate = function(el) {
+            if(document.getElementById('fishing-header').classList.contains('hidden') === false) { return; } // No strict validation in fishing
+            const form = el.closest('form');
+            const idVal = form.querySelector('.inp-id').value.trim();
+            const isU = idVal.toUpperCase().startsWith('U');
+            
+            if (isU && el.closest('.input-only-field')) {
+                el.classList.remove('input-error'); 
+                const err = el.parentElement.querySelector('.error-msg');
+                if(err) err.classList.remove('visible');
+                return;
+            }
+            const err = el.parentElement.querySelector('.error-msg');
+            if(!el.value) { el.classList.add('input-error'); if(err) err.classList.add('visible'); } 
+            else { el.classList.remove('input-error'); if(err) err.classList.remove('visible'); }
+        }
+        window.validateMember = function(el) { if(!document.getElementById('fishing-header').classList.contains('hidden')) return; const err = el.closest('form').querySelector('.member-error'); if(!el.value) err.classList.add('visible'); else err.classList.remove('visible'); }
+        window.validatePet = function(el) { if(!document.getElementById('fishing-header').classList.contains('hidden')) return; const err = el.closest('form').querySelector('.pet-error'); if(!el.value) err.classList.add('visible'); else err.classList.remove('visible'); }
+        window.validateTagOther = function(el) { if(!document.getElementById('fishing-header').classList.contains('hidden')) return; const chk = el.closest('form').querySelector('.tag-other-check'); const err = el.closest('form').querySelector('.tag-other-error'); if(chk.checked && !el.value) { el.classList.add('input-error'); err.classList.add('visible'); } else { el.classList.remove('input-error'); err.classList.remove('visible'); } }
+        window.validateOther = function(el, selectClass) { const sel = el.closest('form').querySelector(selectClass); const err = el.parentElement.querySelector('.error-msg'); if(sel.value.includes('其他') || sel.value.includes('Other')) { if(!el.value) { el.classList.add('input-error'); if(err) err.classList.add('visible'); } else { el.classList.remove('input-error'); if(err) err.classList.remove('visible'); } } }
+        window.validateOverseas = function(form) {
+            if(!document.getElementById('fishing-header').classList.contains('hidden')) return true;
+            const idVal = form.querySelector('.inp-id').value.trim();
+            if (idVal.toUpperCase().startsWith('U')) return true;
+            const chks = form.querySelectorAll('.overseas-check:checked');
+            const err = form.querySelector('.overseas-error');
+            if(chks.length === 0) { err.classList.add('visible'); return false; }
+            else { err.classList.remove('visible'); return true; }
+        }
+
+        // --- Main Functions ---
+
+        window.clearInputForm = function(type) {
             if(!confirm("確定要清除所有填寫內容嗎？")) return;
-            inputCache = null;
-            const form = document.getElementById('employer-form');
-            form.reset();
-            currentMembers = [];
-            currentPets = [];
-            updateMemberDisplay();
-            updatePetDisplay();
-            toggleNatOther();
-            toggleRoomOther();
-            togglePetInputs();
-            toggleTagOther();
-            document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
-            document.querySelectorAll('.overseas-check').forEach(c => c.checked = false);
-            document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
-            document.querySelectorAll('.input-error').forEach(e => e.classList.remove('input-error'));
-            document.getElementById('inp-inquiry-date').valueAsDate = new Date();
-            document.getElementById('edit-doc-id').value = '';
-            document.getElementById('inp-id').value = getNextId('E');
+            mainForm.reset();
+            // Reset ID based on mode
+            if(document.getElementById('fishing-header').classList.contains('hidden')) {
+                 mainForm.form.querySelector('.inp-id').value = getNextId('E');
+            } else {
+                 mainForm.form.querySelector('.inp-id').value = getNextId('U');
+            }
+        }
+        
+        window.closeEditMode = function() {
+            if(confirm("確定取消修改？未儲存的資料將會遺失。")) {
+                switchAdminSub('list');
+            }
         }
 
-        function snapshotInputForm() {
-            inputCache = {
-                id: document.getElementById('inp-id').value,
-                location: document.getElementById('inp-location').value,
-                flatSize: document.getElementById('inp-flat-size').value,
-                nationality: document.getElementById('inp-nationality').value,
-                nationalityOther: document.getElementById('inp-nationality-other').value,
-                room: document.getElementById('inp-room').value,
-                roomOther: document.getElementById('inp-room-other').value,
-                date: document.getElementById('inp-date').value,
-                salary: document.getElementById('inp-salary').value,
-                lang: document.getElementById('inp-lang').value,
-                empReq: document.getElementById('inp-emp-req').value,
-                remarks: document.getElementById('inp-remarks').value,
-                empName: document.getElementById('inp-emp-name').value,
-                empLang: document.getElementById('inp-emp-lang').value,
-                empPhone: document.getElementById('inp-emp-phone').value,
-                inqDate: document.getElementById('inp-inquiry-date').value,
-                referrer: document.getElementById('inp-referrer').value,
-                editDocId: document.getElementById('edit-doc-id').value,
-                members: [...currentMembers],
-                pets: [...currentPets],
-                tags: Array.from(document.querySelectorAll('.tag-checkbox:checked')).map(c => c.value),
-                overseas: Array.from(document.querySelectorAll('.overseas-check:checked')).map(c => c.value),
-                tagOtherChecked: document.getElementById('tag-other-check').checked,
-                tagOtherText: document.getElementById('tag-other-text').value,
-                petOtherText: document.getElementById('inp-pets-other-text').value
-            };
-        }
-
-        function restoreInputForm() {
-            if (!inputCache) return;
-            document.getElementById('inp-id').value = inputCache.id;
-            document.getElementById('inp-location').value = inputCache.location;
-            document.getElementById('inp-flat-size').value = inputCache.flatSize;
-            document.getElementById('inp-nationality').value = inputCache.nationality;
-            document.getElementById('inp-nationality-other').value = inputCache.nationalityOther;
-            document.getElementById('inp-room').value = inputCache.room;
-            document.getElementById('inp-room-other').value = inputCache.roomOther;
-            document.getElementById('inp-date').value = inputCache.date;
-            document.getElementById('inp-salary').value = inputCache.salary;
-            document.getElementById('inp-lang').value = inputCache.lang;
-            document.getElementById('inp-emp-req').value = inputCache.empReq;
-            document.getElementById('inp-remarks').value = inputCache.remarks;
-            document.getElementById('inp-emp-name').value = inputCache.empName;
-            document.getElementById('inp-emp-lang').value = inputCache.empLang;
-            document.getElementById('inp-emp-phone').value = inputCache.empPhone;
-            document.getElementById('inp-inquiry-date').value = inputCache.inqDate;
-            document.getElementById('inp-referrer').value = inputCache.referrer;
-            document.getElementById('edit-doc-id').value = inputCache.editDocId;
-            currentMembers = [...inputCache.members];
-            updateMemberDisplay();
-            currentPets = [...inputCache.pets];
-            updatePetDisplay();
-            document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = inputCache.tags.includes(c.value));
-            document.querySelectorAll('.overseas-check').forEach(c => c.checked = inputCache.overseas.includes(c.value));
-            document.getElementById('tag-other-check').checked = inputCache.tagOtherChecked;
-            document.getElementById('tag-other-text').value = inputCache.tagOtherText;
-            document.getElementById('inp-pets-other-text').value = inputCache.petOtherText;
-            toggleNatOther();
-            toggleRoomOther();
-            toggleTagOther();
-            togglePetInputs();
-        }
-
-        window.handleSave = async function() {
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true; document.getElementById('btn-save-text').innerText = "處理中...";
-            const isFishing = !document.getElementById('fishing-header').classList.contains('hidden');
+        window.handleSave = async function(btn) {
+            const form = btn.closest('form');
+            const mgr = form === mainForm.form ? mainForm : editForm;
+            
+            const btnTextSpan = btn.querySelector('.btn-save-text');
+            const orgText = btnTextSpan.innerText;
+            btn.disabled = true; btnTextSpan.innerText = "處理中...";
+            
+            const isFishingMode = !document.getElementById('fishing-header').classList.contains('hidden') && mgr === mainForm;
             
             try {
-                const id = document.getElementById('inp-id').value;
-                const loc = document.getElementById('inp-location').value;
-                let nat = document.getElementById('inp-nationality').value; if(nat === 'Other') nat = document.getElementById('inp-nationality-other').value;
-                const memStr = document.getElementById('inp-members-string').value;
-                const petStr = document.getElementById('inp-pets-string').value;
-                let room = document.getElementById('inp-room').value; if(room === '其他') room = document.getElementById('inp-room-other').value;
-                const date = document.getElementById('inp-date').value;
-                const salary = document.getElementById('inp-salary').value;
-                const lang = document.getElementById('inp-lang').value;
-                const remarks = document.getElementById('inp-remarks').value;
+                const id = form.querySelector('.inp-id').value.toUpperCase();
+                const loc = form.querySelector('.inp-location').value;
+                let nat = form.querySelector('.inp-nationality').value; if(nat === 'Other') nat = form.querySelector('.inp-nationality-other').value;
+                const memStr = form.querySelector('.inp-members-string').value;
+                const petStr = form.querySelector('.inp-pets-string').value;
+                let room = form.querySelector('.inp-room').value; if(room === '其他') room = form.querySelector('.inp-room-other').value;
+                const date = form.querySelector('.inp-date').value;
+                const salary = form.querySelector('.inp-salary').value;
+                const lang = form.querySelector('.inp-lang').value;
+                const remarks = form.querySelector('.inp-remarks').value;
 
                 let tags = [];
-                document.querySelectorAll('.tag-checkbox:checked').forEach(c => tags.push(c.value));
-                if(document.getElementById('tag-other-check').checked) { const ot = document.getElementById('tag-other-text').value; if(ot) tags.push(ot); }
+                form.querySelectorAll('.tag-checkbox:checked').forEach(c => tags.push(c.value));
+                if(form.querySelector('.tag-other-check').checked) { const ot = form.querySelector('.tag-other-text').value; if(ot) tags.push(ot); }
                 const tagStr = tags.join(', ');
 
                 let overseasStr="", flatSize="", empReq="", empName="", empLang="", empPhone="", inqDate="", referrer="";
-                
-                const isU = id && id.toUpperCase().startsWith('U');
+                const isU = id.startsWith('U');
 
-                if (!isFishing) {
-                    let overseasArr = [];
-                    document.querySelectorAll('.overseas-check:checked').forEach(c => overseasArr.push(c.value));
-                    overseasStr = overseasArr.join(', ');
-                    flatSize = document.getElementById('inp-flat-size').value;
-                    empReq = document.getElementById('inp-emp-req').value;
-                    empName = document.getElementById('inp-emp-name').value;
-                    empLang = document.getElementById('inp-emp-lang').value;
-                    empPhone = document.getElementById('inp-emp-phone').value;
-                    inqDate = document.getElementById('inp-inquiry-date').value;
-                    referrer = document.getElementById('inp-referrer').value;
-
-                    // Validation
-                    window.validate(document.getElementById('inp-id'));
-                    window.validate(document.getElementById('inp-location'));
-                    window.validate(document.getElementById('inp-nationality'));
-                    window.validate(document.getElementById('inp-room'));
-                    window.validate(document.getElementById('inp-date'));
-                    window.validate(document.getElementById('inp-salary'));
-                    window.validate(document.getElementById('inp-lang'));
-                    window.validateMember(document.getElementById('inp-members-string'));
-                    window.validatePet(document.getElementById('inp-pets-string'));
-                    
-                    if (!isU) {
-                        window.validate(document.getElementById('inp-flat-size'));
-                        window.validate(document.getElementById('inp-emp-name'));
-                        window.validate(document.getElementById('inp-emp-lang'));
-                        window.validate(document.getElementById('inp-emp-phone'));
-                        window.validate(document.getElementById('inp-inquiry-date'));
-                        window.validate(document.getElementById('inp-referrer'));
-                        const osValid = window.validateOverseas();
-                        if(!osValid) throw new Error('你漏填了問題');
+                if (!isFishingMode) {
+                    // Full Validation for Input/Edit
+                    if(!isU) {
+                         let overseasArr = [];
+                         form.querySelectorAll('.overseas-check:checked').forEach(c => overseasArr.push(c.value));
+                         overseasStr = overseasArr.join(', ');
+                         flatSize = form.querySelector('.inp-flat-size').value;
+                         empReq = form.querySelector('.inp-emp-req').value;
+                         empName = form.querySelector('.inp-emp-name').value;
+                         empLang = form.querySelector('.inp-emp-lang').value;
+                         empPhone = form.querySelector('.inp-emp-phone').value;
+                         inqDate = form.querySelector('.inp-inquiry-date').value;
+                         referrer = form.querySelector('.inp-referrer').value;
+                         
+                         if(!validateOverseas(form)) throw new Error('你漏填了諮詢類別');
+                         if(!flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer) throw new Error('你漏填了內部欄位');
                     }
-
-                    window.validateTagOther(document.getElementById('tag-other-text'));
-                    window.validateOther(document.getElementById('inp-room-other'), 'inp-room');
-                    window.validateOther(document.getElementById('inp-nationality-other'), 'inp-nationality');
-
-                    const tagOtherCheck = document.getElementById('tag-other-check');
-                    if(tagOtherCheck.checked && !document.getElementById('tag-other-text').value) throw new Error('你漏填了問題');
-
-                    if(document.getElementById('inp-room').value === '其他' && !document.getElementById('inp-room-other').value) throw new Error('你漏填了問題');
-                    if(document.getElementById('inp-nationality').value === 'Other' && !document.getElementById('inp-nationality-other').value) throw new Error('你漏填了問題');
-
-                    if (isU) {
-                         if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
-                            throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
-                        }
-                    } else {
-                        if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang || !flatSize || !empName || !empLang || !empPhone || !inqDate || !referrer) {
-                            throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
-                        }
-                    }
-                } else {
                     if (!id || !loc || !nat || !memStr || !petStr || !room || !date || !salary || !lang) {
-                        throw new Error('你漏填了問題，請檢查和填寫所有問題才可以上載成功');
+                         throw new Error('你漏填了必要問題');
                     }
                 }
 
@@ -998,64 +1010,83 @@
                     updated_at: new Date().toISOString()
                 };
 
-                const docId = document.getElementById('edit-doc-id').value;
+                const docId = form.querySelector('.edit-doc-id').value;
+                const collectionName = isU ? "Fishing List" : "Employers List";
+
                 if (window.isFirebaseMode) {
-                    if (docId) await window.updateDoc(window.doc(window.db, "employers", docId), dataObj);
-                    else await window.addDoc(window.collection(window.db, "employers"), dataObj);
-                } else {
-                    // 單機模式Fallback
-                    if (docId) { 
-                        const idx = employers.findIndex(e => e.docId === docId); 
-                        if (idx !== -1) employers[idx] = { ...dataObj, docId }; 
-                    } else { 
-                        dataObj.docId = String(Date.now());
-                        employers.push(dataObj); 
+                    if (docId && mgr === editForm) {
+                        // Update
+                        await window.updateDoc(window.doc(window.db, collectionName, docId), dataObj);
+                    } else {
+                        // Create
+                        await window.addDoc(window.collection(window.db, collectionName), dataObj);
                     }
-                    employers.sort((a, b) => a.id.localeCompare(b.id));
-                    
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers));
+                } else {
+                    // Offline Fallback
+                    if (docId && mgr === editForm) {
+                        // Find and update in appropriate array
+                        const targetArr = isU ? fishingData : employers;
+                        const idx = targetArr.findIndex(e => e.docId === docId);
+                        if(idx !== -1) targetArr[idx] = { ...dataObj, docId };
+                    } else {
+                        dataObj.docId = String(Date.now());
+                        if(isU) fishingData.push(dataObj); else employers.push(dataObj);
+                    }
+                    const allData = [...employers, ...fishingData];
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allData));
                     refreshCurrentView();
                 }
 
-                inputCache = null;
-
-                // Sync to Google Sheets (Backup Write Only)
+                // Sync to Google Sheets
                 if (window.GOOGLE_SCRIPT_URL) { 
-                    sendToGoogleSheets(dataObj); 
+                    sendToGoogleSheets(dataObj, isU ? 'Fishing' : 'Employers'); 
                 }
 
-                if (isFishing) { 
-                    alert('上載成功及已上架'); 
-                    switchAdminSub('list'); 
-                } else { 
-                    if (docId) {
-                        alert('資料已更改及上架'); 
+                alert(mgr === editForm ? '資料已更改及上架' : '上載成功及已上架');
+
+                if (mgr === mainForm) {
+                    // If we just uploaded a fishing data, don't clear fully, just regen
+                    if(isFishingMode) {
+                         generateFishingData();
                     } else {
-                        alert('上載成功及已上架');
-                        document.getElementById('employer-form').reset();
-                        document.getElementById('edit-doc-id').value = '';
-                        currentMembers = []; updateMemberDisplay();
-                        currentPets = []; updatePetDisplay();
-                        document.getElementById('inp-id').value = getNextId('E');
-                        document.getElementById('inp-inquiry-date').valueAsDate = new Date();
+                         mainForm.reset();
+                         form.querySelector('.inp-id').value = getNextId('E');
                     }
-                    switchAdminSub('list'); 
+                }
+                
+                // If edit mode, close it
+                if (mgr === editForm) {
+                    switchAdminSub('list');
                 }
 
             } catch (e) {
                 if(!e.message.includes('薪金錯誤')) alert(e.message);
             } finally {
-                btn.disabled = false; document.getElementById('btn-save-text').innerText = "上載資料";
+                btn.disabled = false; btnTextSpan.innerText = orgText;
             }
         };
 
-        async function sendToGoogleSheets(data) {
+        async function sendToGoogleSheets(data, sheetType) {
+            // Mapping keys to Chinese headers for Google Sheet
+            const mapping = {
+                id: "僱主編號", location: "僱主地區", nationality: "國籍", members: "家庭成員", pets: "寵物",
+                room: "工人房", date: "上班日期", salary: "薪金", lang: "語言", remarks: "備註", tags: "標籤",
+                flat_size: "單位呎數", overseas_local: "諮詢類別", emp_req: "僱主要求", emp_name: "僱主姓名",
+                emp_lang: "僱主語言", emp_phone: "僱主電話", inq_date: "查詢日期", referrer: "介紹人", updated_at: "更新時間"
+            };
+
+            const payload = { sheetType: sheetType }; // Tell App Script which sheet
+            for (let key in data) {
+                if(mapping[key]) payload[mapping[key]] = data[key];
+                else payload[key] = data[key];
+            }
+
             try {
                 await fetch(window.GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(payload)
                 });
                 console.log('Sent to Sheets backup');
             } catch (e) {
@@ -1063,62 +1094,97 @@
             }
         }
 
-        window.toggleActive = async function(docId, currentStatus) {
-            if (window.isFirebaseMode) { await window.updateDoc(window.doc(window.db, "employers", docId), { active: !currentStatus }); }
-            else { const emp = employers.find(e => e.docId === docId); if(emp) { emp.active = !currentStatus; localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers)); refreshCurrentView(); } }
+        window.toggleActive = async function(docId, currentStatus, idStr) {
+            const isU = idStr.startsWith('U');
+            const collectionName = isU ? "Fishing List" : "Employers List";
+            if (window.isFirebaseMode) { 
+                await window.updateDoc(window.doc(window.db, collectionName, docId), { active: !currentStatus }); 
+            } else { 
+                const arr = isU ? fishingData : employers;
+                const emp = arr.find(e => e.docId === docId); 
+                if(emp) { emp.active = !currentStatus; localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([...employers, ...fishingData])); refreshCurrentView(); } 
+            }
         };
-        window.deleteEmp = async function(docId) {
-            if(!confirm('確認刪除？這將永久移除資料。')) return; if(!confirm('再次確認：您確定要永久刪除此資料嗎？')) return;
-            if(window.isFirebaseMode) { await window.deleteDoc(window.doc(window.db, "employers", docId)); }
-            else { const idx = employers.findIndex(e => e.docId === docId); if(idx > -1) { employers.splice(idx, 1); localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employers)); refreshCurrentView(); } }
+
+        window.deleteEmp = async function(docId, idStr) {
+            if(!confirm('確認刪除？這將永久移除資料。')) return; 
+            const isU = idStr.startsWith('U');
+            const collectionName = isU ? "Fishing List" : "Employers List";
+            
+            if(window.isFirebaseMode) { 
+                await window.deleteDoc(window.doc(window.db, collectionName, docId)); 
+            } else { 
+                const arr = isU ? fishingData : employers;
+                const idx = arr.findIndex(e => e.docId === docId); 
+                if(idx > -1) { arr.splice(idx, 1); localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([...employers, ...fishingData])); refreshCurrentView(); } 
+            }
         };
+
         window.editEmp = function(docId) {
-            const e = employers.find(emp => emp.docId === docId);
+            const all = getAllEmployers();
+            const e = all.find(emp => emp.docId === docId);
             if(!e) return;
             
-            document.getElementById('inp-id').value = e.id;
-            document.getElementById('inp-location').value = e.location;
-            const stdNat = ['Filipino','Indonesian','Filipino & Indonesian','Indonesian & Filipino'];
-            if(stdNat.includes(e.nationality)) { document.getElementById('inp-nationality').value = e.nationality; toggleNatOther(); }
-            else { document.getElementById('inp-nationality').value = 'Other'; toggleNatOther(); document.getElementById('inp-nationality-other').value = e.nationality; }
-            document.getElementById('inp-room').value = e.room; 
-            if(e.room && !['有工人房','有工人房','與小孩同房','與長者同房','與另外傭同房','與女僱主同房'].includes(e.room)){
-                 document.getElementById('inp-room').value = '其他'; toggleRoomOther(); document.getElementById('inp-room-other').value = e.room;
-            }
-            document.getElementById('inp-date').value = e.date;
-            document.getElementById('inp-salary').value = e.salary;
-            document.getElementById('inp-lang').value = e.lang;
-            document.getElementById('inp-remarks').value = e.remarks || '';
+            const form = editForm.form;
+            editForm.reset();
             
-            if(document.getElementById('inp-flat-size')) {
-                document.getElementById('inp-flat-size').value = e.flat_size || '';
-                document.getElementById('inp-emp-req').value = e.emp_req || '';
-                document.getElementById('inp-emp-name').value = e.emp_name || '';
-                document.getElementById('inp-emp-lang').value = e.emp_lang || '';
-                document.getElementById('inp-emp-phone').value = e.emp_phone || '';
-                document.getElementById('inp-inquiry-date').value = e.inquiry_date || '';
-                document.getElementById('inp-referrer').value = e.referrer || '';
-                
-                const os = (e.overseas_local || '').split(', ');
-                document.querySelectorAll('.overseas-check').forEach(c => c.checked = os.includes(c.value));
+            form.querySelector('.inp-id').value = e.id;
+            form.querySelector('.inp-location').value = e.location;
+            
+            const stdNat = ['Filipino','Indonesian','Filipino & Indonesian','Indonesian & Filipino'];
+            if(stdNat.includes(e.nationality)) { form.querySelector('.inp-nationality').value = e.nationality; toggleNatOther(form.querySelector('.inp-nationality')); }
+            else { form.querySelector('.inp-nationality').value = 'Other'; toggleNatOther(form.querySelector('.inp-nationality')); form.querySelector('.inp-nationality-other').value = e.nationality; }
+            
+            form.querySelector('.inp-room').value = e.room; 
+            if(e.room && !['有工人房','有工人房','與小孩同房','與長者同房','與另外傭同房','與女僱主同房'].includes(e.room)){
+                 form.querySelector('.inp-room').value = '其他'; toggleRoomOther(form.querySelector('.inp-room')); form.querySelector('.inp-room-other').value = e.room;
+            }
+            form.querySelector('.inp-date').value = e.date;
+            form.querySelector('.inp-salary').value = e.salary;
+            form.querySelector('.inp-lang').value = e.lang;
+            form.querySelector('.inp-remarks').value = e.remarks || '';
+            
+            // Internal
+            form.querySelector('.inp-flat-size').value = e.flat_size || '';
+            form.querySelector('.inp-emp-req').value = e.emp_req || '';
+            form.querySelector('.inp-emp-name').value = e.emp_name || '';
+            form.querySelector('.inp-emp-lang').value = e.emp_lang || '';
+            form.querySelector('.inp-emp-phone').value = e.emp_phone || '';
+            form.querySelector('.inp-inquiry-date').value = e.inq_date || e.inquiry_date || '';
+            form.querySelector('.inp-referrer').value = e.referrer || '';
+            
+            if(e.overseas_local) {
+                const os = e.overseas_local.split(', ');
+                form.querySelectorAll('.overseas-check').forEach(c => c.checked = os.includes(c.value));
             }
 
             const ts = (e.tags || '').split(', ');
-            document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = ts.includes(c.value));
+            form.querySelectorAll('.tag-checkbox').forEach(c => c.checked = ts.includes(c.value));
+            
+            // Check for custom tags in edit
             const stdTags = tagList;
             const customTag = ts.find(t => !stdTags.includes(t) && t.trim() !== '');
             if(customTag) {
-                document.getElementById('tag-other-check').checked = true;
-                document.getElementById('tag-other-text').value = customTag;
-                toggleTagOther();
+                form.querySelector('.tag-other-check').checked = true;
+                form.querySelector('.tag-other-text').value = customTag;
+                toggleTagOther(form.querySelector('.tag-other-check'));
             }
 
-            document.getElementById('edit-doc-id').value = docId;
-            currentMembers = []; e.members.split(', ').forEach(p => currentMembers.push({text: p})); updateMemberDisplay();
-            currentPets = []; if(e.pets) e.pets.split(', ').forEach(p => currentPets.push({text: p})); updatePetDisplay();
+            form.querySelector('.edit-doc-id').value = docId;
             
-            snapshotInputForm();
-            switchAdminSub('input'); window.scrollTo(0,0);
+            // Rebuild members
+            editForm.members = []; 
+            if(e.members) e.members.split(', ').forEach(p => editForm.members.push({text: p})); 
+            editForm.updateMemberDisplay();
+            
+            // Rebuild pets
+            editForm.pets = []; 
+            if(e.pets) e.pets.split(', ').forEach(p => editForm.pets.push({text: p})); 
+            editForm.updatePetDisplay();
+            
+            // Switch to Edit Mode (Separate Tab)
+            switchAdminSub('edit');
+            window.scrollTo(0,0);
         };
 
         window.switchTab = function(tab) {
@@ -1127,8 +1193,13 @@
             document.getElementById('page-public').classList.add('hidden-section');
             document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
             document.getElementById('nav-' + tab).classList.add('active');
+            
+            // Badge Logic
+            const badge = document.getElementById('mode-badge');
+            if (tab === 'admin') badge.classList.remove('hidden'); else badge.classList.add('hidden');
+
             if (tab === 'admin') {
-                if (sessionStorage.getItem('isAdminLoggedIn') === 'true') { document.getElementById('page-admin').classList.remove('hidden-section'); switchAdminSub('input'); }
+                if (sessionStorage.getItem('isAdminLoggedIn') === 'true') { document.getElementById('page-admin').classList.remove('hidden-section'); switchAdminSub('list'); }
                 else { document.getElementById('page-login').classList.remove('hidden-section'); }
             } else {
                 document.getElementById('page-public').classList.remove('hidden-section');
@@ -1141,118 +1212,168 @@
         };
         
         window.switchAdminSub = function(sub) {
-            if (currentAdminSub === 'input' && sub !== 'input') {
-                snapshotInputForm();
-            }
-
-            document.getElementById('admin-input-area').classList.add('hidden'); document.getElementById('admin-list-area').classList.add('hidden');
-            document.getElementById('fishing-header').classList.add('hidden'); document.getElementById('fishing-footer').classList.add('hidden');
+            document.getElementById('admin-input-area').classList.add('hidden');
+            document.getElementById('admin-list-area').classList.add('hidden');
+            document.getElementById('admin-edit-area').classList.add('hidden');
+            document.getElementById('fishing-header').classList.add('hidden');
+            document.getElementById('fishing-footer').classList.add('hidden');
             document.getElementById('clear-btn-container').classList.add('hidden');
+
+            // Reset Input Fields Visibility
+            document.querySelectorAll('.input-only-field').forEach(f => f.classList.remove('hidden')); 
             
-            const internalFields = document.querySelectorAll('.input-only-field');
+            // Button Styles
+            const btnInput = document.getElementById('sub-btn-input');
+            const btnFishing = document.getElementById('sub-btn-fishing');
+            const btnList = document.getElementById('sub-btn-list');
+            const btnEdit = document.getElementById('sub-btn-edit');
             
+            btnInput.classList.remove('ring-4', 'ring-blue-300');
+            btnFishing.classList.remove('ring-4', 'ring-purple-300');
+            btnList.classList.remove('ring-4', 'ring-yellow-300');
+            btnEdit.classList.add('hidden'); // Hide edit button unless active
+
             if (sub === 'input') {
                 document.getElementById('admin-input-area').classList.remove('hidden');
                 document.getElementById('clear-btn-container').classList.remove('hidden');
-                internalFields.forEach(f => f.classList.remove('hidden'));
+                btnInput.classList.add('ring-4', 'ring-blue-300');
                 
-                if (inputCache) {
-                    restoreInputForm();
-                } else {
-                    if(document.getElementById('edit-doc-id').value === '') {
-                        document.getElementById('employer-form').reset();
-                        currentMembers=[]; updateMemberDisplay();
-                        currentPets=[]; updatePetDisplay();
-                        document.getElementById('inp-inquiry-date').valueAsDate = new Date();
-                        document.getElementById('inp-id').value = getNextId('E');
-                    }
-                }
+                // Show label "Employer ID starts with E"
+                mainForm.form.querySelector('.label-id').innerText = "僱主編號 (編號以E開始，例如：E2805)";
+                // Reset to next E ID if empty
+                if(!mainForm.form.querySelector('.inp-id').value) mainForm.form.querySelector('.inp-id').value = getNextId('E');
             }
             else if (sub === 'fishing') {
                 document.getElementById('admin-input-area').classList.remove('hidden');
                 document.getElementById('fishing-header').classList.remove('hidden');
                 document.getElementById('fishing-footer').classList.remove('hidden');
-                internalFields.forEach(f => f.classList.add('hidden')); 
+                btnFishing.classList.add('ring-4', 'ring-purple-300');
                 
-                document.getElementById('employer-form').reset();
+                // Hide internal fields
+                document.querySelectorAll('.input-only-field').forEach(f => f.classList.add('hidden')); 
+                
+                // Label Change
+                mainForm.form.querySelector('.label-id').innerText = "僱主編號 (編號以U開始，例如：U1001)";
+                
                 generateFishingData();
             }
             else if (sub === 'list') {
                 document.getElementById('admin-list-area').classList.remove('hidden');
+                btnList.classList.add('ring-4', 'ring-yellow-300');
                 currentAdminPage = 1;
                 renderAdminList();
+            }
+            else if (sub === 'edit') {
+                 document.getElementById('admin-edit-area').classList.remove('hidden');
+                 btnEdit.classList.remove('hidden');
+                 btnEdit.classList.add('ring-4', 'ring-orange-300');
             }
             
             currentAdminSub = sub;
         };
 
-        window.changeAdminPage = function(dir) {
-            const totalPages = Math.ceil(employers.length / itemsPerPage);
-            let newPage = currentAdminPage + dir;
-            if (newPage < 1) newPage = 1; else if (newPage > totalPages) newPage = totalPages;
-            if (newPage !== currentAdminPage) { currentAdminPage = newPage; renderAdminList(); window.scrollTo(0, 0); }
+        window.generateFishingData = function() {
+            mainForm.reset();
+            const form = mainForm.form;
+            
+            // 1. ID
+            form.querySelector('.inp-id').value = getNextId('U');
+            
+            // 2. Location
+            const st = Object.keys(locationMap); 
+            form.querySelector('.inp-location').value = st[Math.floor(Math.random()*st.length)];
+            
+            // 3. Nationality
+            const nats = ['Filipino', 'Indonesian', 'Filipino & Indonesian', 'Indonesian & Filipino'];
+            form.querySelector('.inp-nationality').value = nats[Math.floor(Math.random()*nats.length)]; 
+            toggleNatOther(form.querySelector('.inp-nationality'));
+
+            // 4. Members (Revised Logic)
+            mainForm.members = [];
+            // Probability: 2A 1C (High), then others.
+            // Constraint: Total 1-4. Max 2A, Max 2C.
+            
+            const r = Math.random();
+            let nAdult, nChild;
+            
+            if (r < 0.4) { nAdult = 2; nChild = 1; } // 40% chance for 2A 1C
+            else if (r < 0.6) { nAdult = 2; nChild = 2; }
+            else if (r < 0.7) { nAdult = 2; nChild = 0; }
+            else if (r < 0.8) { nAdult = 1; nChild = 0; }
+            else if (r < 0.9) { nAdult = 1; nChild = 1; }
+            else { nAdult = 1; nChild = 2; }
+            
+            if (nAdult > 0) {
+                // Merge Adults: "2成人" or "1成人"
+                mainForm.members.push({text: `${nAdult}成人`});
+            }
+            
+            if (nChild > 0) {
+                // Separate Children with Ages 0-17
+                for(let i=0; i<nChild; i++) {
+                    const age = Math.floor(Math.random() * 18); // 0-17
+                    mainForm.members.push({text: `1小孩(${age}歲)`});
+                }
+            }
+            
+            mainForm.updateMemberDisplay();
+
+            // 5. Pets (Revised Logic)
+            mainForm.pets = [];
+            // "No Pets" highest probability. Max 2 qty.
+            const pr = Math.random();
+            if (pr < 0.6) {
+                // 60% No pets
+                mainForm.pets.push({text: '沒有寵物'});
+            } else {
+                // Generate 1 type, 1-2 qty
+                const pTypes = ['小狗', '中狗', '大狗', '貓'];
+                const pType = pTypes[Math.floor(Math.random()*pTypes.length)];
+                const qty = Math.random() > 0.7 ? 2 : 1; // 30% chance of 2
+                mainForm.pets.push({text: `${qty}${pType}`});
+            }
+            mainForm.updatePetDisplay();
+
+            // 6. Room
+            const rOpts = ['有工人房','有工人房','有工人房','與小孩同房','與長者同房','與另外傭同房','與女僱主同房'];
+            form.querySelector('.inp-room').value = rOpts[Math.floor(Math.random()*rOpts.length)]; 
+            toggleRoomOther(form.querySelector('.inp-room'));
+            
+            // 7. Salary & Lang
+            const sals = [5100, 5300, 5500, 5500, 5500, 5800, 6000]; 
+            form.querySelector('.inp-salary').value = sals[Math.floor(Math.random()*sals.length)];
+            const langs = ['英文','英文','英文','廣東話','普通話','英文&廣東話','英文&普通話']; 
+            form.querySelector('.inp-lang').value = langs[Math.floor(Math.random()*langs.length)];
+            
+            form.querySelector('.inp-date').value = '盡快'; 
+            form.querySelector('.inp-remarks').value = '';
+            
+            // 8. Tags (Revised)
+            form.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
+            // Can have no tags, or random subset of allowed tags
+            if (Math.random() > 0.3) {
+                 const numTags = Math.floor(Math.random() * 3) + 1; // 1 to 3 tags
+                 let choices = fishingTags.sort(() => 0.5 - Math.random()).slice(0, numTags);
+                 choices.forEach(t => { 
+                     // Find checkbox with this value
+                     const chk = Array.from(form.querySelectorAll('.tag-checkbox')).find(c => c.value === t);
+                     if(chk) chk.checked = true;
+                 });
+            }
         };
 
-        function formatMembersForDisplay(text) {
-            if(!text) return '-';
-            const parts = text.split(', ');
-            let adultCount = 0;
-            let others = [];
-            parts.forEach(p => {
-                if(p.includes('成人')) {
-                    const match = p.match(/(\d+)成人/);
-                    if(match) adultCount += parseInt(match[1]);
-                    else adultCount += 1;
-                } else {
-                    others.push(p);
-                }
-            });
-            let res = [];
-            if(adultCount > 0) res.push(`${adultCount}成人`);
-            res = res.concat(others);
-            return res.join(', ');
-        }
-
-        function formatPetsForDisplay(text) {
-            if(!text) return '-';
-            if(text === '沒有寵物') return text;
-            
-            const parts = text.split(', ');
-            const petCounts = {};
-            const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
-            let others = [];
-
-            parts.forEach(p => {
-                let matched = false;
-                for(let t of targetTypes) {
-                    if(p.includes(t)) {
-                        const match = p.match(/^(\d+)(.+)$/);
-                        if(match && match[2] === t) {
-                            petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]);
-                            matched = true;
-                            break;
-                        }
-                    }
-                }
-                if(!matched) others.push(p);
-            });
-
-            let res = [];
-            for(let t in petCounts) {
-                res.push(`${petCounts[t]}${t}`);
-            }
-            return res.concat(others).join(', ');
-        }
+        // --- Render Lists ---
 
         function renderAdminList() {
             const c = document.getElementById('admin-records-container'); c.innerHTML = '';
-            document.getElementById('db-status-text').innerText = window.isFirebaseMode ? "(Firebase Cloud)" : (window.isGoogleSheetMode ? "(Google Sheet)" : "(Offline)");
+            document.getElementById('db-status-text').innerText = window.isFirebaseMode ? "(Firebase Cloud)" : "(Offline)";
             
-            if(employers.length === 0) { c.innerHTML = '<p class="text-center text-gray-400">暫無資料</p>'; return; }
+            const allData = getAllEmployers(); // Combined list
+            if(allData.length === 0) { c.innerHTML = '<p class="text-center text-gray-400">暫無資料</p>'; return; }
 
-            const totalPages = Math.ceil(employers.length / itemsPerPage);
+            const totalPages = Math.ceil(allData.length / itemsPerPage);
             const start = (currentAdminPage - 1) * itemsPerPage;
-            const pageData = employers.slice(start, start + itemsPerPage);
+            const pageData = allData.slice(start, start + itemsPerPage);
 
             document.getElementById('admin-pagination').classList.remove('hidden');
             document.getElementById('admin-page-indicator').innerText = `Page ${currentAdminPage} / ${totalPages || 1}`;
@@ -1264,18 +1385,22 @@
                 const dispMem = formatMembersForDisplay(e.members);
                 const dispPet = formatPetsForDisplay(e.pets);
 
+                // Differentiate visually between E and U
+                const isU = e.id.startsWith('U');
+                const borderColor = isU ? 'border-l-purple-500' : (e.active ? 'border-l-green-500' : 'border-l-red-500');
+                const badge = isU ? '<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded ml-2">釣魚盤</span>' : '';
+
                 const html = `
-                    <div class="bg-white p-6 rounded-lg shadow border border-l-8 ${e.active ? 'border-l-green-500' : 'border-l-red-500'}">
+                    <div class="bg-white p-6 rounded-lg shadow border border-l-8 ${borderColor}">
                         <div class="flex flex-col sm:flex-row justify-between items-start mb-4 pb-2 border-b">
-                            <h4 class="font-bold text-blue-800">${e.id} ${status}</h4>
+                            <h4 class="font-bold text-blue-800 flex items-center">${e.id} ${badge} <span class="ml-2 text-sm">${status}</span></h4>
                             <div class="space-x-2 mt-2 sm:mt-0">
                                 <button onclick="editEmp('${e.docId}')" class="bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">修改</button>
-                                <button onclick="toggleActive('${e.docId}', ${e.active})" class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200">${e.active ? '下架' : '上架'}</button>
-                                <button onclick="deleteEmp('${e.docId}')" class="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">刪除</button>
+                                <button onclick="toggleActive('${e.docId}', ${e.active}, '${e.id}')" class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200">${e.active ? '下架' : '上架'}</button>
+                                <button onclick="deleteEmp('${e.docId}', '${e.id}')" class="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">刪除</button>
                             </div>
                         </div>
                         <div class="text-gray-700">
-                            <p class="font-bold text-blue-600 mb-2">公開資料：</p>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
                                 <p><span class="font-bold">成員:</span> ${dispMem}</p>
                                 <p><span class="font-bold">地區:</span> ${e.location}</p>
@@ -1289,6 +1414,7 @@
                                 ${tTags}
                             </div>
                             
+                            ${!isU ? `
                             <div class="mt-4 p-4 rounded bg-blue-50 border border-blue-200">
                                 <p class="font-bold text-blue-600 mb-2">內部紀錄：</p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
@@ -1298,88 +1424,48 @@
                                     <p><span class="font-bold">僱主姓名:</span> ${e.emp_name||'-'}</p>
                                     <p><span class="font-bold">僱主語言:</span> ${e.emp_lang||'-'}</p>
                                     <p><span class="font-bold">僱主電話:</span> ${e.emp_phone||'-'}</p>
-                                    <p><span class="font-bold">查詢日期:</span> ${e.inquiry_date||'-'}</p>
+                                    <p><span class="font-bold">查詢日期:</span> ${e.inq_date||e.inquiry_date||'-'}</p>
                                     <p><span class="font-bold">介紹人:</span> ${e.referrer||'-'}</p>
                                 </div>
                             </div>
+                            ` : ''}
                         </div>
                     </div>`;
                 c.innerHTML += html;
             });
         }
 
-        window.generateFishingData = function() {
-            document.getElementById('inp-id').value = getNextId('U');
-            
-            const st = Object.keys(locationMap); document.getElementById('inp-location').value = st[Math.floor(Math.random()*st.length)];
-            const nats = ['Filipino', 'Indonesian', 'Filipino & Indonesian', 'Indonesian & Filipino'];
-            document.getElementById('inp-nationality').value = nats[Math.floor(Math.random()*nats.length)]; toggleNatOther();
-            
-            currentMembers = [];
-            const a = Math.floor(Math.random()*2)+1; 
-            for(let i=0; i<a; i++) currentMembers.push({text: `${Math.floor(Math.random()*3)+1}成人`});
-            if(Math.random()>0.5) { const k = Math.floor(Math.random()*2)+1; currentMembers.push({text: `${k}小孩(${Math.floor(Math.random()*17)}歲)`}); }
-            if(Math.random()>0.7) { const e = Math.floor(Math.random()*2)+1; currentMembers.push({text: `${e}長者(${Math.floor(Math.random()*31)+60}歲)`}); }
-            updateMemberDisplay();
-
-            currentPets = [];
-            const pTypes = ['沒有寵物', '小狗', '中狗', '大狗', '貓'];
-            const p = pTypes[Math.floor(Math.random()*pTypes.length)];
-            if(p === '沒有寵物') currentPets.push({text: '沒有寵物'}); else { const qty = Math.floor(Math.random()*2)+1; currentPets.push({text: `${qty}${p}`}); }
-            updatePetDisplay();
-
-            const rOpts = ['有工人房','有工人房','有工人房','與小孩同房','與長者同房','與另外傭同房','與女僱主同房'];
-            document.getElementById('inp-room').value = rOpts[Math.floor(Math.random()*rOpts.length)]; toggleRoomOther();
-            const sals = [5100, 5300, 5500, 5500, 5500, 5800, 6000]; document.getElementById('inp-salary').value = sals[Math.floor(Math.random()*sals.length)];
-            const langs = ['英文','英文','英文','廣東話','普通話','英文&廣東話','英文&普通話']; document.getElementById('inp-lang').value = langs[Math.floor(Math.random()*langs.length)];
-            document.getElementById('inp-date').value = '盡快'; document.getElementById('inp-remarks').value = '';
-            
-            document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
-            document.getElementById('tag-other-check').checked = false; toggleTagOther();
-            const allowedTags = ["急 Urgent", "高薪 High salary", "近地鐵 Near MTR", "好僱主 Good employer", 
-                                 "一個小孩 1 child only", "一個長者 1 elderly only", "2個長者 2 elderly only", "3個長者 3 elderly only",
-                                 "一位成人 1 adult only", "2位成人 2 adult only", "3位成人 3 adult only"];
-            const numTags = Math.floor(Math.random() * 3);
-            let choices = allowedTags.sort(() => 0.5 - Math.random()).slice(0, numTags);
-            choices.forEach(t => { const el = document.getElementById(`tag-${t}`); if(el) el.checked = true; });
-        };
-
         function renderPublicList() {
             const container = document.getElementById('public-records-container'); container.innerHTML = '';
-            const activeEmps = employers.filter(e => e.active);
+            // Show ACTIVE employers from BOTH lists
+            const allData = getAllEmployers();
+            const activeEmps = allData.filter(e => e.active);
+            
             const totalPages = Math.ceil(activeEmps.length / itemsPerPage);
             const start = (currentPage - 1) * itemsPerPage;
             const pageData = activeEmps.slice(start, start + itemsPerPage);
             const isEn = currentLang === 'english';
             
-            const bannerBox = document.getElementById('banner-box');
+            // Banner & Translations logic kept same
             const bannerText = document.getElementById('banner-text');
-            bannerBox.className = "w-full max-w-5xl mb-6 p-6 rounded-lg text-left shadow-md border-l-8 bg-blue-50 border-blue-300 text-black";
-            
             const footerMsg = document.getElementById('public-footer-msg');
-            footerMsg.className = "w-full max-w-5xl p-4 text-center rounded-lg mt-4 hidden shadow-md border-l-8";
-            
+            footerMsg.classList.remove('hidden');
+
             if(isEn) {
                 bannerText.innerHTML = "💵 All helpers NO placement fee, NO agency fee, NO registration fee.<br><br>💼 Apply job or refer your friends? Click the green button below to WhatsApp us.<br><br>🤝 In our agency, you have the Right to choose your next preferred employer, we do not force you to choose, refer your friends and family now.";
                 bannerText.style.fontSize = "30px";
                 document.getElementById('public-title').innerText = 'Employer List'; 
                 document.getElementById('nav-indonesian').innerText = '🇮🇩 Indonesian';
                 document.getElementById('btn-prev').innerText = 'Prev'; document.getElementById('btn-next').innerText = 'Next';
-                
                 footerMsg.innerHTML = "If you still haven’t found employer you like, please contact us on WhatsApp, we will help you find one that you like.";
-                footerMsg.classList.add('bg-blue-50', 'border-blue-300');
             } else {
                 bannerText.innerHTML = "💵 Semua pekerja tanpa biaya penempatan, tanpa biaya agen, dan tanpa biaya pendaftaran.<br><br>💼 Ingin melamar kerja atau merekomendasikan teman? Klik tombol hijau di bawah untuk WhatsApp kami.<br><br>🤝 Di Agen Ketenagakerjaan kami, Anda memiliki hak untuk memilih majikan berikutnya yang Anda inginkan. Kami tidak memaksa Anda untuk memilih. Rekomendasikan teman dan keluarga Anda sekarang.";
                 bannerText.style.fontSize = "30px";
                 document.getElementById('public-title').innerText = 'Daftar Majikan';
                 document.getElementById('nav-indonesian').innerText = '🇮🇩 Indonesian';
                 document.getElementById('btn-prev').innerText = 'Sebelumnya'; document.getElementById('btn-next').innerText = 'Berikutnya';
-                
                 footerMsg.innerHTML = "Jika Anda masih belum menemukan majikan yang Anda sukai, silakan hubungi kami melalui WhatsApp. Kami akan membantu Anda menemukan yang sesuai dengan keinginan Anda.";
-                footerMsg.classList.add('bg-blue-50', 'border-blue-300');
             }
-            
-            footerMsg.classList.remove('hidden');
 
             if(pageData.length === 0) { container.innerHTML = '<div class="col-span-full text-center p-10 text-gray-500">No Data / Tidak Ada Data</div>'; updatePageIndicator(0, 0, isEn); return; }
 
@@ -1423,16 +1509,7 @@
                 const waBtnText = isEn ? "I'm interested in this Employer" : "Saya tertarik dengan majikan ini";
                 const waLink = `https://wa.me/85296111003?text=${encodeURIComponent(waMsg)}`;
 
-                const L = {
-                    loc: isEn ? 'Employer Location' : 'Lokasi Majikan',
-                    nat: isEn ? 'Nationality' : 'kebangsaan',
-                    fam: isEn ? 'Employer Member & Age' : 'Anggota Keluarga & Usia',
-                    pets: isEn ? 'Pets' : 'Hewan Peliharaan',
-                    room: isEn ? 'Helper Room' : 'Kamar Pembantu',
-                    date: isEn ? 'START of WORK DAY' : 'Mulai Hari Kerja',
-                    lang: isEn ? 'Language' : 'Bahasa',
-                    rem: isEn ? 'Remarks' : 'Catatan',
-                };
+                const L = { loc: isEn ? 'Employer Location' : 'Lokasi Majikan', nat: isEn ? 'Nationality' : 'kebangsaan', fam: isEn ? 'Employer Member & Age' : 'Anggota Keluarga & Usia', pets: isEn ? 'Pets' : 'Hewan Peliharaan', room: isEn ? 'Helper Room' : 'Kamar Pembantu', date: isEn ? 'START of WORK DAY' : 'Mulai Hari Kerja', lang: isEn ? 'Language' : 'Bahasa', rem: isEn ? 'Remarks' : 'Catatan' };
 
                 const html = `
                     <div class="bg-white rounded-xl shadow-xl border-t-8 border-blue-600 overflow-hidden flex flex-col p-8 space-y-5">
@@ -1463,102 +1540,40 @@
             updatePageIndicator(currentPage, totalPages, isEn);
         }
 
-        function updatePageIndicator(curr, total, isEn) {
-            const label = isEn ? 'Page' : 'Halaman';
-            document.getElementById('page-indicator').innerText = `${label} ${curr} / ${total || 1}`;
-        }
-
-        function translateText(text, lang) {
-            if(!text) return '-'; let res = text;
-            for(let cn in locationMap) { if(res.includes(cn)) res = res.replace(cn, locationMap[cn]); }
-            return res;
-        }
-
-        function translateMembers(text, lang) {
+        function updatePageIndicator(curr, total, isEn) { document.getElementById('page-indicator').innerText = `${isEn ? 'Page' : 'Halaman'} ${curr} / ${total || 1}`; }
+        
+        // Helper formatting functions
+        function formatMembersForDisplay(text) {
             if(!text) return '-';
             const parts = text.split(', ');
-            let adultCount = 0;
-            let otherParts = [];
-            
-            parts.forEach(p => {
-                if(p.includes('成人')) {
-                    const match = p.match(/(\d+)成人/);
-                    if(match) adultCount += parseInt(match[1]);
-                    else adultCount += 1; 
-                } else {
-                    otherParts.push(p);
-                }
-            });
-
-            let translatedOthers = otherParts.map(p => {
-                let res = p;
-                if(lang === 'english') {
-                    res = res.replace(/小孩/g, ' Kid').replace(/長者/g, ' Elderly').replace(/男孩/g, ' Boy').replace(/女孩/g, ' Girl')
-                             .replace(/雙胞胎/g, ' Twins').replace(/三胞胎/g, ' Triplets')
-                             .replace(/婆婆/g, ' Grandma').replace(/公公/g, ' Grandpa').replace(/歲/g, 'yo');
-                } else {
-                    res = res.replace(/小孩/g, ' Anak').replace(/長者/g, ' Lansia').replace(/男孩/g, ' Anak Laki-laki').replace(/女孩/g, ' Anak Perempuan')
-                             .replace(/雙胞胎/g, ' Kembar').replace(/三胞胎/g, ' Kembar Tiga')
-                             .replace(/婆婆/g, ' Nenek').replace(/公公/g, ' Kakek').replace(/歲/g, 'th');
-                }
-                return res;
-            });
-
-            if(adultCount > 0) {
-                const label = lang === 'english' ? 'Adult' : 'Dewasa';
-                translatedOthers.unshift(`${adultCount} ${label}`);
-            }
-            
-            return translatedOthers.join(', ');
+            let adultCount = 0; let others = [];
+            parts.forEach(p => { if(p.includes('成人')) { const match = p.match(/(\d+)成人/); if(match) adultCount += parseInt(match[1]); else adultCount += 1; } else { others.push(p); } });
+            let res = []; if(adultCount > 0) res.push(`${adultCount}成人`); res = res.concat(others); return res.join(', ');
         }
-
+        function formatPetsForDisplay(text) {
+            if(!text) return '-'; if(text === '沒有寵物') return text;
+            const parts = text.split(', '); const petCounts = {}; const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜']; let others = [];
+            parts.forEach(p => { let matched = false; for(let t of targetTypes) { if(p.includes(t)) { const match = p.match(/^(\d+)(.+)$/); if(match && match[2] === t) { petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]); matched = true; break; } } } if(!matched) others.push(p); });
+            let res = []; for(let t in petCounts) { res.push(`${petCounts[t]}${t}`); } return res.concat(others).join(', ');
+        }
+        function translateText(text, lang) { if(!text) return '-'; let res = text; for(let cn in locationMap) { if(res.includes(cn)) res = res.replace(cn, locationMap[cn]); } return res; }
+        function translateMembers(text, lang) {
+            if(!text) return '-'; const parts = text.split(', '); let adultCount = 0; let otherParts = [];
+            parts.forEach(p => { if(p.includes('成人')) { const match = p.match(/(\d+)成人/); if(match) adultCount += parseInt(match[1]); else adultCount += 1; } else { otherParts.push(p); } });
+            let translatedOthers = otherParts.map(p => { let res = p; if(lang === 'english') { res = res.replace(/小孩/g, ' Kid').replace(/長者/g, ' Elderly').replace(/男孩/g, ' Boy').replace(/女孩/g, ' Girl').replace(/雙胞胎/g, ' Twins').replace(/三胞胎/g, ' Triplets').replace(/婆婆/g, ' Grandma').replace(/公公/g, ' Grandpa').replace(/歲/g, 'yo'); } else { res = res.replace(/小孩/g, ' Anak').replace(/長者/g, ' Lansia').replace(/男孩/g, ' Anak Laki-laki').replace(/女孩/g, ' Anak Perempuan').replace(/雙胞胎/g, ' Kembar').replace(/三胞胎/g, ' Kembar Tiga').replace(/婆婆/g, ' Nenek').replace(/公公/g, ' Kakek').replace(/歲/g, 'th'); } return res; });
+            if(adultCount > 0) { const label = lang === 'english' ? 'Adult' : 'Dewasa'; translatedOthers.unshift(`${adultCount} ${label}`); } return translatedOthers.join(', ');
+        }
         function translatePets(text, lang) {
             if(!text) return '-'; if(text === '沒有寵物') return getDict('沒有寵物', lang);
-            
-            const parts = text.split(', ');
-            const petCounts = {};
-            const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜'];
-            let others = [];
-
-            parts.forEach(p => {
-                let matched = false;
-                for(let t of targetTypes) {
-                    if(p.includes(t)) {
-                        const match = p.match(/^(\d+)(.+)$/);
-                        if(match && match[2] === t) {
-                            petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]);
-                            matched = true;
-                            break;
-                        }
-                    }
-                }
-                if(!matched) others.push(p);
-            });
-
-            const mergedParts = [];
-            for(let t in petCounts) {
-                mergedParts.push(`${petCounts[t]}${t}`);
-            }
-            const allParts = mergedParts.concat(others);
-
-            const translatedParts = allParts.map(p => {
-                const match = p.match(/^(\d+)(.+)$/);
-                if(match) { const qty = match[1]; const name = match[2]; const tName = getDict(name, lang); return `${qty} ${tName}`; }
-                return p; 
-            });
+            const parts = text.split(', '); const petCounts = {}; const targetTypes = ['小狗','中狗','大狗','貓','兔','鸚鵡','烏龜']; let others = [];
+            parts.forEach(p => { let matched = false; for(let t of targetTypes) { if(p.includes(t)) { const match = p.match(/^(\d+)(.+)$/); if(match && match[2] === t) { petCounts[t] = (petCounts[t] || 0) + parseInt(match[1]); matched = true; break; } } } if(!matched) others.push(p); });
+            const mergedParts = []; for(let t in petCounts) mergedParts.push(`${petCounts[t]}${t}`); const allParts = mergedParts.concat(others);
+            const translatedParts = allParts.map(p => { const match = p.match(/^(\d+)(.+)$/); if(match) { const qty = match[1]; const name = match[2]; const tName = getDict(name, lang); return `${qty} ${tName}`; } return p; });
             return translatedParts.join(', ');
         }
-        function getDict(key, lang) {
-            const t = lang === 'english' ? 'en' : 'id';
-            if(dict[key] && dict[key][t]) return dict[key][t]; if(key && key.length > 0) return key; return '-';
-        }
-        window.changePage = function(dir) {
-            const activeEmps = employers.filter(e => e.active);
-            const totalPages = Math.ceil(activeEmps.length / itemsPerPage);
-            let newPage = currentPage + dir;
-            if (newPage < 1) newPage = 1; else if (newPage > totalPages) newPage = totalPages;
-            if (newPage !== currentPage) { currentPage = newPage; renderPublicList(); window.scrollTo(0, 0); }
-        };
+        function getDict(key, lang) { const t = lang === 'english' ? 'en' : 'id'; if(dict[key] && dict[key][t]) return dict[key][t]; if(key && key.length > 0) return key; return '-'; }
+        window.changePage = function(dir) { currentPage += dir; const all = getAllEmployers(); const active = all.filter(e=>e.active); const total = Math.ceil(active.length/itemsPerPage); if(currentPage < 1) currentPage=1; if(currentPage>total) currentPage=total; renderPublicList(); window.scrollTo(0,0); };
+        window.changeAdminPage = function(dir) { currentAdminPage += dir; const all = getAllEmployers(); const total = Math.ceil(all.length/itemsPerPage); if(currentAdminPage < 1) currentAdminPage=1; if(currentAdminPage>total) currentAdminPage=total; renderAdminList(); window.scrollTo(0,0); };
     </script>
 </body>
 </html>
